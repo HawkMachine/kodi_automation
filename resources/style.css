@@ -1,0 +1,58 @@
+table {
+  border-collapse: collapse;
+}
+td {
+  padding: 15px;
+}
+table, th, td {
+  border: 1px solid gray;
+}
+th {
+	font-size: 18;
+	background: black;
+	color: white;
+	font-weight: bold;
+}
+tr:nth-child(odd) {
+  background: white;
+}
+tr:nth-child(even) {
+  background: #DDDDDD;
+}
+.darkred_bold {
+  color: darkred;
+	font-weight: bold;
+}
+.darkgreen_bold {
+  color: darkgreen;
+	font-weight: bold;
+}
+.darkblue_bold {
+  color: darkblue;
+	font-weight: bold;
+}
+.torrent_name {
+  font-size: 18;
+	font-weight: bold;
+	display: block;
+}
+.torrent_state {
+	font-weight: bold;
+	text-transform: uppercase;
+}
+.move_status {
+	font-weight: bold;
+	text-transform: uppercase;
+}
+.path {
+	font-family: monospace;
+}
+
+.errorbox {
+	color: black;
+	background: #FF9900;
+	border: solid 3px #FF3300;
+	font-weight: bold;
+	margin: 1em;
+	padding: 1em;
+}

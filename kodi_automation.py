@@ -1,6 +1,33 @@
+"""Automation of moving files to kodi-scanned directories."""
 
+import os
 import sys
 import argparse
+import Queue
+
+
+def ScanDir(dirpath, exts=None):
+  """Scans direcotry and returns files."""
+  # exts == None - return all
+
+  queue = Queue.Queue()
+  queue.put(dirpath)
+
+  result = []
+
+  while not queue.empty():
+    dirpath = queue.get()
+    for _, dirnames, filenames in os.walk(dirpath):
+      for new_dirpath in dirnames:
+        queue.put(os.path.join(dirpath, new_dirpath))
+
+      # Filters paths if required.
+      if exts:
+        filenames = [filepath for filepath in filenames
+                     if any(filepath.endswith(ext) for ext in exts)]
+      result.extend(filenames)
+
+  return result
 
 
 def Classification(paths):
@@ -29,12 +56,16 @@ def main():
   parser.add_argument('--dry-run', dest='dry_run', default=False)
   args = parser.parse_args()
 
+  if not args.scan_dir or not args.movies_dir or not args.series_dir:
+    parser.print_help()
+    return 1
+
   video_exts = args.video_exts.split(',')
 
-  new_paths = ScanDir(args.scan_dir)
+  new_paths = ScanDir(args.scan_dir, exts=video_exts)
   new_paths = [path for path in new_paths if any(path.endswith(ext) for ext in video_exts)]
 
-  movies_paths, episodes = Clasification(new_paths)
+  movies_paths, episodes = Classification(new_paths)
 
   for movie_path in movies_paths:
     print 'Moving', path, 'to', args.movies_dir
@@ -48,4 +79,4 @@ def main():
 
 
 if __name__ == '__main__':
-  main()
+  sys.exit(main())

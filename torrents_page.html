@@ -1,0 +1,170 @@
+<html>
+<head>
+  <link rel="stylesheet" type="text/css" href="/resources/style.css">
+</head>
+<body>
+{{range $idx, $error := .Errors }}
+{{if $error }}
+<div class="errorbox">
+	<span class="errorheader">ERROR</span>
+  {{print $error}}
+</div>
+{{end}}
+{{end}}
+
+{{if .CacheResfreshed }}
+Last cache refresh: {{print .CacheResfreshed}}
+{{end}}
+<form action="/cache/update">
+	<input type="submit" value="Update cache">
+</form>
+
+<!-- Curent Paths -->
+{{if .PathInfo }}
+{{$stl :=  .SeriesTargets }}
+<table>
+  <colgroup>
+		<col width="600px"><!-- Path -->
+		<col width="200px" align="center"><!-- Torrent Status -->
+		<col width="500px" align="center"><!-- Move Status -->
+  </colgroup>
+	<tr>
+		<th>Path</th>
+		<th>Torrent Status</th>
+		<th>Move</th>
+	</tr>
+	{{ range $idx, $pathInfo := .PathInfo }}
+  <tr>
+		<!-- Path Column -->
+    <td>
+      <span class="torrent_name path">{{print $pathInfo.Path }}</span>
+      {{if $pathInfo.TorrentInfo }}
+      <div>
+        <ul>
+        {{ range $idx, $torrentFileInfo := $pathInfo.TorrentInfo.Files }}
+				<li><span class="path">{{print $torrentFileInfo.Name}}</span></li>
+        {{end}}
+        </ul>
+      </div>
+      {{end}}
+		</td>
+
+		<!-- Torrent Status -->
+		<td>
+      {{if $pathInfo.TorrentInfo }}
+				{{if $pathInfo.TorrentInfo.IsFinished }}
+					<span class="torrent_state darkgreen_bold">Finished</span>
+					{{else}}
+					<span class="torrent_state darkred_bold">Not Finished</span>
+				{{end}}
+			{{else}}
+					<span class="torrent_state darkblue_bold">No Torrent Info</span>
+      {{end}}
+    </td>
+
+		<!-- Move Form -->
+    <td>
+			{{if $pathInfo.MoveInfo.Moving}}
+				<span class="darkblue_bold">MOVING TO</span>
+				<span class="target path">{{print $pathInfo.MoveInfo.Target}}</span>
+			{{else}}
+			  {{if $pathInfo.MoveInfo.Error}}
+					<span class="darkblue_bold">Last move error: {{print $pathInfo.MoveInfo.Error}}</span>
+				{{end}}
+				{{if $pathInfo.AllowMove}}
+				  {{if not $pathInfo.TorrentInfo}}
+					  <span class="darkblue_bold">No torrent info - be careful what you move</span>
+					{{end}}
+					<form action="/move" method="post">
+						<input type="submit" value="move">
+						to
+						<select name="target">
+							<option value="movies">movies</option>
+							{{if $stl}}
+								{{range $idx, $path := $stl}}
+								<option value="{{print $path}}">{{print $path}}</option>
+								{{end}}
+							{{end}}
+						</select>
+						<input type="hidden" name="path" value="{{print $pathInfo.Path}}">
+						<input type="hidden" name="type" value="move">
+					</form>
+				{{else}}
+				  {{if $pathInfo.TorrentInfo}}
+						{{if $pathInfo.TorrentInfo.IsFinished}}
+							<span class="darkblue_bold">Not allowed to move path but torrent is finished. ????</span>
+						{{else}}
+							<span class="darkblue_bold">Not allowed because torrent not finished yet.</span>
+						{{end}}
+					{{else}}
+							<span class="darkblue_bold">Not allowed because torrent not finished yet.</span>
+					{{end}}
+				{{end}}
+			{{end}}
+    </td>
+  </tr>
+  {{end}}
+</table>
+{{end}}
+
+<!-- History of paths -->
+{{if .PathInfoHistory }}
+<table>
+  <colgroup>
+		<col width="600px"><!-- Path -->
+		<col width="200px"><!-- Torrent Status -->
+		<col width="500px"><!-- Move Status -->
+  </colgroup>
+	<tr>
+		<th>Path</th>
+		<th>Torrent Status</th>
+		<th>Move Target</th>
+	</tr>
+	{{ range $idx, $pathInfo := .PathInfoHistory }}
+  <tr>
+		<!-- Path Column -->
+    <td>
+      <span class="torrent_name path">{{print $pathInfo.Path }}</span>
+      {{if $pathInfo.TorrentInfo }}
+      <div>
+        <ul>
+        {{ range $idx, $torrentFileInfo := $pathInfo.TorrentInfo.Files }}
+				<li><span class="path">{{print $torrentFileInfo.Name}}</span></li>
+        {{end}}
+        </ul>
+      </div>
+      {{end}}
+		</td>
+
+		<!-- Torrent Status -->
+		<td>
+      {{if $pathInfo.TorrentInfo }}
+				{{if $pathInfo.TorrentInfo.IsFinished }}
+					<span class="torrent_state darkgreen_bold">Finished</span>
+					{{else}}
+					<span class="torrent_state darkred_bold">Not Finished</span>
+				{{end}}
+			{{else}}
+					<span class="torrent_state darkblue_bold">No Torrent Info</span>
+      {{end}}
+    </td>
+
+		<!-- Move Target -->
+		<td>
+			<span class="darkblue_bold">{{print $pathInfo.MoveInfo.Target }}</span>
+		</td>
+
+  {{end}}
+</table>
+{{end}}
+
+{{if .SeriesTargets}}
+<div>
+	{{range $idx, $path := .SeriesTargets}}
+	<p><span class="path">{{print $path}}</span></p>
+	{{end}}
+</div>
+{{end}}
+
+</body>
+</html>
