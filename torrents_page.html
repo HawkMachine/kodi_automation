@@ -158,13 +158,5 @@ Last cache refresh: {{print .CacheResfreshed}}
 </table>
 {{end}}
 
-{{if .SeriesTargets}}
-<div>
-	{{range $idx, $path := .SeriesTargets}}
-	<p><span class="path">{{print $path}}</span></p>
-	{{end}}
-</div>
-{{end}}
-
 </body>
 </html>

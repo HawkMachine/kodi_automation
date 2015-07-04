@@ -22,11 +22,14 @@ var (
 	SERIES_TARGET = flag.String("series_dir", "", "where to move series")
 )
 
-func directoryListing(dirname string, levels int) ([]string, error) {
+func directoryListing(dirname string, levels int, dirs_only bool) ([]string, error) {
 	res := []string{}
 	err := filepath.Walk(dirname, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
+		}
+		if dirs_only && !info.IsDir() {
+			return nil
 		}
 		tmp := path
 		for i := 0; i < levels; i++ {
@@ -307,7 +310,7 @@ func (s *Server) Move(path string, to string) error {
 	}
 	if err != nil {
 		pi.MoveInfo.Error = err
-    s.pathInfo[path] = pi
+		s.pathInfo[path] = pi
 		return err
 	}
 
@@ -367,7 +370,7 @@ func (s *Server) updatePathInfoCache() error {
 	log.Printf("Updating path info cache")
 	// Retrieve current data.
 	tis, _ := s.loadTorrentsInfo()
-	paths, err := directoryListing(s.sourceDir, 1)
+	paths, err := directoryListing(s.sourceDir, 1, false)
 	if err != nil {
 		log.Printf("Directory listing error: %v", err)
 		return err
@@ -408,7 +411,7 @@ func (s *Server) updatePathInfoCache() error {
 }
 
 func (s *Server) updateSeriesTargetListing() error {
-	listing, err := directoryListing(s.seriesTarget, 2)
+	listing, err := directoryListing(s.seriesTarget, 2, true)
 	if err != nil {
 		return err
 	}
@@ -465,9 +468,9 @@ func movePostHandler(s *Server, w http.ResponseWriter, r *http.Request) {
 	default:
 		err = fmt.Errorf("Submitted POST has unrecognized type value: %s", messageType)
 	}
-//	if err != nil {
-//		http.Error(w, err.Error(), http.StatusInternalServerError)
-//	}
+	//	if err != nil {
+	//		http.Error(w, err.Error(), http.StatusInternalServerError)
+	//	}
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
@@ -485,8 +488,8 @@ func pathInfoPageHandler(s *Server, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-  // ---- prepare pathInfo and pathInfoHistory
-  pathInfo, pathInfoHistory := s.GetPathInfoAndPathInfoHistory()
+	// ---- prepare pathInfo and pathInfoHistory
+	pathInfo, pathInfoHistory := s.GetPathInfoAndPathInfoHistory()
 	pathInfoList := PathInfoSlice{}
 	for _, pi := range pathInfo {
 		pathInfoList = append(pathInfoList, pi)
@@ -496,25 +499,25 @@ func pathInfoPageHandler(s *Server, w http.ResponseWriter, r *http.Request) {
 		pathInfoHistoryList = append(pathInfoHistoryList, pi)
 	}
 
-  // ---- prepare target listing
-  seriesTargetListing := s.GetSeriesTargetListing()
-  seriesTarget := s.GetSeriesTarget()
-  seriesTargets := []string{}
-  for _, sTarget := range seriesTargetListing {
-    seriesTargets = append(seriesTargets, sTarget[len(seriesTarget)+1:])
-  }
+	// ---- prepare target listing
+	seriesTargetListing := s.GetSeriesTargetListing()
+	seriesTarget := s.GetSeriesTarget()
+	seriesTargets := []string{}
+	for _, sTarget := range seriesTargetListing {
+		seriesTargets = append(seriesTargets, sTarget[len(seriesTarget)+1:])
+	}
 
 	sort.Sort(pathInfoList)
 	context := struct {
-		PathInfo            []PathInfo
-		PathInfoHistory     []PathInfo
-		SeriesTargets       []string
-		Errors              []error
-		CacheResfreshed     time.Time
+		PathInfo        []PathInfo
+		PathInfoHistory []PathInfo
+		SeriesTargets   []string
+		Errors          []error
+		CacheResfreshed time.Time
 	}{
-		PathInfo:            pathInfoList,
-		PathInfoHistory:     pathInfoHistoryList,
-		SeriesTargets:       seriesTargets,
+		PathInfo:        pathInfoList,
+		PathInfoHistory: pathInfoHistoryList,
+		SeriesTargets:   seriesTargets,
 		Errors: []error{
 			postErr,
 		},
