@@ -362,7 +362,7 @@ func (s *Server) SetPathMoveError(path string, err error) error {
 
 func (s *Server) loadTorrentsInfo() ([]transmission.TorrentInfo, error) {
 	// In the future I need more to ask both - transmission and scan local disk.
-	return s.transmissionCli.GetTorrents()
+	return s.transmissionCli.GetTorrents(s.sourceDir)
 }
 
 func (s *Server) updatePathInfoCache() error {

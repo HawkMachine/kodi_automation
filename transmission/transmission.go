@@ -13,10 +13,6 @@ import (
 	"net/http"
 )
 
-var (
-	DOWNLOAD_DIR = "/home/kuba/Videos"
-)
-
 type Request struct {
 	Method    string            // required
 	Arguments map[string]string // optional
@@ -139,8 +135,8 @@ func directoryListing(dirname string) ([]string, error) {
 	return res, nil
 }
 
-func (t *Transmission) GetTorrents() ([]TorrentInfo, error) {
-	fis, err := ioutil.ReadDir(DOWNLOAD_DIR)
+func (t *Transmission) GetTorrents(dirname string) ([]TorrentInfo, error) {
+	fis, err := ioutil.ReadDir(dirname)
 	if err != nil {
 		return nil, err
 	}
@@ -149,13 +145,13 @@ func (t *Transmission) GetTorrents() ([]TorrentInfo, error) {
 		// Get files of this torrent.
 		paths := []string{}
 		if fi.IsDir() {
-			path := filepath.Join(DOWNLOAD_DIR, fi.Name())
+			path := filepath.Join(dirname, fi.Name())
 			paths, err = directoryListing(path)
 			if err != nil {
 				return nil, err
 			}
 		} else {
-			paths = []string{filepath.Join(DOWNLOAD_DIR, fi.Name())}
+			paths = []string{filepath.Join(dirname, fi.Name())}
 		}
 
 		// Check if is finished.
@@ -174,7 +170,7 @@ func (t *Transmission) GetTorrents() ([]TorrentInfo, error) {
 			Name:        fi.Name(),
 			IsFinished:  isFinished,
 			Files:       tfi,
-			DownloadDir: DOWNLOAD_DIR,
+			DownloadDir: dirname,
 		}
 		res = append(res, ti)
 	}
