@@ -17,10 +17,12 @@ import (
 )
 
 var (
-	PORT          = flag.Int("port", 8080, "port to use")
-	SOURCE_DIR    = flag.String("source_dir", "", "directory to scan")
-	MOVIES_TARGET = flag.String("movies_dir", "", "where to move movies")
-	SERIES_TARGET = flag.String("series_dir", "", "where to move series")
+	MV_BUFFER_SIZE  = flag.Int("mv_buffer_size", 5, "size of the mv request buffer")
+	MAX_MV_COMMANDS = flag.Int("max_mv_commands", 5, "max mv commands running in parallel")
+	PORT            = flag.Int("port", 8080, "port to use")
+	SOURCE_DIR      = flag.String("source_dir", "", "directory to scan")
+	MOVIES_TARGET   = flag.String("movies_dir", "", "where to move movies")
+	SERIES_TARGET   = flag.String("series_dir", "", "where to move series")
 )
 
 func directoryListing(dirname string, levels int, dirs_only bool) ([]string, error) {
@@ -167,7 +169,7 @@ type Server struct {
 	lock sync.Mutex
 }
 
-func (s *Server) Init(sourceDir string, moviesTarget string, seriesTarget string) error {
+func (s *Server) Init(sourceDir string, moviesTarget string, seriesTarget string, port int, maxMvComands int, mvBufferSize int) error {
 	s.transmissionCli = transmission.New("", 0, "", "")
 	s.sourceDir = sourceDir
 	s.moviesTarget = moviesTarget
@@ -177,9 +179,8 @@ func (s *Server) Init(sourceDir string, moviesTarget string, seriesTarget string
 	s.refreshDuration = 5 * time.Minute
 	s.cacheRefreshed = time.Now()
 
-	workerCount := 5
-	s.moveChannel = make(chan MoveListenerRequest, workerCount)
-	for i := 0; i < workerCount; i++ {
+	s.moveChannel = make(chan MoveListenerRequest, mvBufferSize)
+	for i := 0; i < maxMvComands; i++ {
 		go MoveListener(s, s.moveChannel)
 	}
 	go CacheUpdater(s, time.Minute)
@@ -252,6 +253,13 @@ func (s *Server) GetPathInfoAndPathInfoHistory() (map[string]PathInfo, []PathInf
 	return s.pathInfo, s.pathInfoHistory
 }
 
+func (s *Server) GetMvBuffSizeAndElems() (int, int) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	return cap(s.moveChannel), len(s.moveChannel)
+}
+
 func (s *Server) GetTemplate(name string) (*template.Template, error) {
 	t, ok := s.parsedTemplates[name]
 	if !ok {
@@ -313,6 +321,9 @@ func (s *Server) Move(path string, to string) error {
 		pi.MoveInfo.Error = err
 		s.pathInfo[path] = pi
 		return err
+	}
+	if len(s.moveChannel) == cap(s.moveChannel) {
+		return fmt.Errorf("Mv requests buffer buffer is full")
 	}
 
 	// Actually making a move.
@@ -508,6 +519,8 @@ func pathInfoPageHandler(s *Server, w http.ResponseWriter, r *http.Request) {
 		seriesTargets = append(seriesTargets, sTarget[len(seriesTarget)+1:])
 	}
 
+	mvBuffSize, mvBuffElems := s.GetMvBuffSizeAndElems()
+
 	sort.Sort(pathInfoList)
 	context := struct {
 		PathInfo        []PathInfo
@@ -515,6 +528,8 @@ func pathInfoPageHandler(s *Server, w http.ResponseWriter, r *http.Request) {
 		SeriesTargets   []string
 		Errors          []error
 		CacheResfreshed time.Time
+		MvBufferSize    int
+		MvBufferElems   int
 	}{
 		PathInfo:        pathInfoList,
 		PathInfoHistory: pathInfoHistoryList,
@@ -523,6 +538,8 @@ func pathInfoPageHandler(s *Server, w http.ResponseWriter, r *http.Request) {
 			postErr,
 		},
 		CacheResfreshed: s.GetCacheRefreshed(),
+		MvBufferSize:    mvBuffSize,
+		MvBufferElems:   mvBuffElems,
 	}
 	err = t.ExecuteTemplate(w, "torrents_page", context)
 	if err != nil {
@@ -547,14 +564,25 @@ func main() {
 	if *SERIES_TARGET, err = filepath.Abs(*SERIES_TARGET); err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Running with source dir=%s, movies target=%s, series_target=%s\n", *SOURCE_DIR, *MOVIES_TARGET, *SERIES_TARGET)
+	if *MAX_MV_COMMANDS <= 5 {
+		*MAX_MV_COMMANDS = 5
+	}
+	if *MV_BUFFER_SIZE <= 5 {
+		*MV_BUFFER_SIZE = 5
+	}
+	log.Printf("PORT             = %d", *PORT)
+	log.Printf("SOURCE_DIR       = %s", *SOURCE_DIR)
+	log.Printf("MOVIES_TARGET    = %s", *MOVIES_TARGET)
+	log.Printf("SERIES_TARGET    = %s", *SERIES_TARGET)
+	log.Printf("MAX_MV_COMMANDS  = %d", *MAX_MV_COMMANDS)
+	log.Printf("MV_BUFFER_SIZE   = %d", *MV_BUFFER_SIZE)
 
 	server := Server{
 		templates: map[string]string{
 			"torrents_page": "torrents_page.html",
 		},
 	}
-	err = server.Init(*SOURCE_DIR, *MOVIES_TARGET, *SERIES_TARGET)
+	err = server.Init(*SOURCE_DIR, *MOVIES_TARGET, *SERIES_TARGET, *PORT, *MAX_MV_COMMANDS, *MV_BUFFER_SIZE)
 	server.UpdateCache()
 	if err != nil {
 		panic(err)

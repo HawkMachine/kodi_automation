@@ -12,12 +12,20 @@
 {{end}}
 {{end}}
 
-{{if .CacheResfreshed }}
-Last cache refresh: {{print .CacheResfreshed}}
-{{end}}
-<form action="/cache/update">
-	<input type="submit" value="Update cache">
-</form>
+<div class="stats">
+<div class="stat_elem">
+	{{if .CacheResfreshed }}
+	<span class="darkblue_bold">Last cache refresh:</span> {{print .CacheResfreshed}}
+	{{end}}
+	<form action="/cache/update">
+		<input type="submit" value="Update cache">
+	</form>
+</div>
+
+<div class="stat_elem">
+	<span class="darkblue_bold">Mv buff size/elems:</span> {{print .MvBufferSize}}/{{print .MvBufferElems}}
+</div>
+</div>
 
 <!-- Curent Paths -->
 {{if .PathInfo }}
@@ -39,7 +47,7 @@ Last cache refresh: {{print .CacheResfreshed}}
     <td>
       <span class="torrent_name path">{{print $pathInfo.Path }}</span>
       {{if $pathInfo.TorrentInfo }}
-      <div>
+      <div class="expandable">
         <ul>
         {{ range $idx, $torrentFileInfo := $pathInfo.TorrentInfo.Files }}
 				<li><span class="path">{{print $torrentFileInfo.Name}}</span></li>

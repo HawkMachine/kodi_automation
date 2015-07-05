@@ -56,3 +56,7 @@ tr:nth-child(even) {
 	margin: 1em;
 	padding: 1em;
 }
+.stats {
+	padding: 1em;
+	margin: 1em;
+}
