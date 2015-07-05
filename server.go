@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"sync"
@@ -90,7 +91,7 @@ func MoveListener(s *Server, ch chan MoveListenerRequest) {
 		log.Printf("MoveListener received requests %v", req)
 		switch req.Type {
 		case "move":
-			err := os.Rename(req.Request.Path, req.Request.To)
+			err := exec.Command("mv", req.Request.Path, req.Request.To).Run()
 			if err != nil {
 				s.SetPathMoveError(req.Request.Path, err)
 			} else {
