@@ -24,7 +24,7 @@ Last cache refresh: {{print .CacheResfreshed}}
 {{$stl :=  .SeriesTargets }}
 <table>
   <colgroup>
-		<col width="600px"><!-- Path -->
+		<col><!-- Path -->
 		<col width="200px" align="center"><!-- Torrent Status -->
 		<col width="500px" align="center"><!-- Move Status -->
   </colgroup>
@@ -69,7 +69,7 @@ Last cache refresh: {{print .CacheResfreshed}}
 				<span class="target path">{{print $pathInfo.MoveInfo.Target}}</span>
 			{{else}}
 			  {{if $pathInfo.MoveInfo.Error}}
-					<span class="darkblue_bold">Last move error: {{print $pathInfo.MoveInfo.Error}}</span>
+					<span class="darkred_bold">Last move error: {{print $pathInfo.MoveInfo.Error}}</span>
 				{{end}}
 				{{if $pathInfo.AllowMove}}
 				  {{if not $pathInfo.TorrentInfo}}
@@ -111,7 +111,7 @@ Last cache refresh: {{print .CacheResfreshed}}
 {{if .PathInfoHistory }}
 <table>
   <colgroup>
-		<col width="600px"><!-- Path -->
+		<col><!-- Path -->
 		<col width="200px"><!-- Torrent Status -->
 		<col width="500px"><!-- Move Status -->
   </colgroup>
