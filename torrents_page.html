@@ -1,6 +1,8 @@
 <html>
 <head>
   <link rel="stylesheet" type="text/css" href="/resources/style.css">
+	<script src="//code.jquery.com/jquery-1.10.2.js"></script>
+	<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
 </head>
 <body>
 {{range $idx, $error := .Errors }}
@@ -45,15 +47,22 @@
   <tr>
 		<!-- Path Column -->
     <td>
-      <span class="torrent_name path">{{print $pathInfo.Path }}</span>
+			<span class="torrent_name path" id="path_{{print $idx}}">▶ {{print $pathInfo.Path }}</span>
       {{if $pathInfo.TorrentInfo }}
-      <div class="expandable">
+			<div class="expandable" id="listing_{{print $idx}}" style="display: none">
         <ul>
         {{ range $idx, $torrentFileInfo := $pathInfo.TorrentInfo.Files }}
 				<li><span class="path">{{print $torrentFileInfo.Name}}</span></li>
         {{end}}
         </ul>
       </div>
+			<script>
+				$(function() {
+					$("#path_{{print $idx}}").click(function() {
+						$("#listing_{{print $idx}}").toggle("fold", {}, 500)
+					});
+				});
+			</script>
       {{end}}
 		</td>
 

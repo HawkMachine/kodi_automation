@@ -107,8 +107,8 @@ func MoveListener(s *Server, ch chan MoveListenerRequest) {
 
 func CacheUpdater(s *Server, d time.Duration) {
 	for {
-		time.Sleep(d)
 		s.UpdateCache()
+		time.Sleep(d)
 	}
 }
 
@@ -169,7 +169,7 @@ type Server struct {
 	lock sync.Mutex
 }
 
-func (s *Server) Init(sourceDir string, moviesTarget string, seriesTarget string, port int, maxMvComands int, mvBufferSize int) error {
+func (s *Server) Start(sourceDir string, moviesTarget string, seriesTarget string, port int, maxMvComands int, mvBufferSize int) error {
 	s.transmissionCli = transmission.New("", 0, "", "")
 	s.sourceDir = sourceDir
 	s.moviesTarget = moviesTarget
@@ -582,8 +582,7 @@ func main() {
 			"torrents_page": "torrents_page.html",
 		},
 	}
-	err = server.Init(*SOURCE_DIR, *MOVIES_TARGET, *SERIES_TARGET, *PORT, *MAX_MV_COMMANDS, *MV_BUFFER_SIZE)
-	server.UpdateCache()
+	err = server.Start(*SOURCE_DIR, *MOVIES_TARGET, *SERIES_TARGET, *PORT, *MAX_MV_COMMANDS, *MV_BUFFER_SIZE)
 	if err != nil {
 		panic(err)
 	}
