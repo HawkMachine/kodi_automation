@@ -1,0 +1,45 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Kodi helper</title>
+	<link rel="stylesheet" type="text/css" href="/resources/style.css">
+	<script src="//code.jquery.com/jquery-1.10.2.js" type="text/javascript"></script>
+	<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js" type="text/javascript"></script>
+</head>
+<body>
+
+<div id="nav">
+	<div class="navbox" id="Links">
+		<div class="navbox_title">LINKS</div>
+		<div class="navbox_content">
+			<div>■ <a href="/">Home</a></div>
+			<div>■ <a href="/transmission">Transmission</a></div>
+			{{if .CustomLinks}}
+			{{range $name, $url := .CustomLinks}}
+			<div>■ <a href="{{print $url}}">{{print $name}}</a></div>
+			{{end}}
+			{{end}}
+		</div>
+	</div>
+</div>
+
+<div id="contents">
+	<!-- Errors -->
+	{{range $idx, $error := .Errors }}
+		{{if $error }}
+		<div class="errorbox">
+			<span class="errorheader">ERROR</span>
+			{{print $error}}
+		</div>
+		{{end}}
+	{{end}}
+
+	<div id="section">
+	{{template "section" .}}
+	</div>
+</div>
+
+</body>
+</html>
+{{end}}

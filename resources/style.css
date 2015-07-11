@@ -19,6 +19,9 @@ tr:nth-child(odd) {
 tr:nth-child(even) {
   background: #DDDDDD;
 }
+.bold {
+	font-weight: bold;
+}
 .darkred_bold {
   color: darkred;
 	font-weight: bold;
@@ -56,7 +59,86 @@ tr:nth-child(even) {
 	margin: 1em;
 	padding: 1em;
 }
-.stats {
+#header {
+	background-color:black;
+	color:white;
+	text-align:center;
+	padding:5px;
+}
+
+/* Navigation */
+#nav {
+	height: 100%;
+	background-color:#eeeeee;
+	line-height:30px;
+	float:left;
+	margin-right: 1em;
+	padding: 5px;
+	width: 20%;
+}
+.navbox {
+	margin-bottom: 1em;	
+	border-left: 2px solid black;
+}
+.navbox_title {
+	background: black;
+	color: white;
+	display: block;
+	width: 100%;
+	text-align: center;
+}
+.navbox_content {
+	padding: 0.5em;
+}
+
+/* Main section */
+#section {
+    width:70%;
+    float:left;
+    padding:10px;
+}
+
+/* Footer */
+#footer {
+    background-color:black;
+    color:white;
+    clear:both;
+    text-align:center;
+    padding:5px;
+}
+/* Statistics box */
+#statistics {
+	height: 180px;
+	margin-bottom: 1em;
+	width: 100%;
+}
+.statistics_box {
+	float: left;
+	margin-right: 1em;
+	border-left: 1px solid black;
+	width: 30%;
+}
+.statistics_box_title {
+	text-align:center;
+	background: black;
+	color: white;
+}
+.statistics_box_content {
 	padding: 1em;
-	margin: 1em;
+}
+.statistics_box_content span {
+	margin-right: 1em;
+	display: block;
+	float: left;
+	width: 8em;
+	text-align: right;
+}
+.disk_stats {
+	border-bottom: 1px solid black;
+	padding-bottom: .5em;
+	margin-bottom: .5em;
+}
+iframe {
+	height: 800px;
+	width: 100%;
 }

@@ -1,42 +1,41 @@
-<html>
-<head>
-  <link rel="stylesheet" type="text/css" href="/resources/style.css">
-	<script src="//code.jquery.com/jquery-1.10.2.js"></script>
-	<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
-</head>
-<body>
-{{range $idx, $error := .Errors }}
-{{if $error }}
-<div class="errorbox">
-	<span class="errorheader">ERROR</span>
-  {{print $error}}
-</div>
-{{end}}
-{{end}}
-
-<div class="stats">
-<div class="stat_elem">
-	{{if .CacheResfreshed }}
-	<span class="darkblue_bold">Last cache refresh:</span> {{print .CacheResfreshed}}
-	{{end}}
-	<form action="/cache/update">
-		<input type="submit" value="Update cache">
-	</form>
-</div>
-
-<div class="stat_elem">
-	<span class="darkblue_bold">Mv buff size/elems:</span> {{print .MvBufferSize}}/{{print .MvBufferElems}}
-</div>
-</div>
-
+{{define "section"}}
 <!-- Curent Paths -->
+<div id="statistics">
+	<div class="statistics_box">
+		<div class="statistics_box_title">DISKS</div>
+		<div class="statistics_box_content">
+			{{range $idx, $diskStats := .DiskStats}}
+			<div class="disk_stats">
+				<div><span class="bold">Path</span>{{$diskStats.Path}}</div>
+				<div><span class="bold">Disk Size</span>{{$diskStats.Size}}</div>
+				<div><span class="bold">Empty Space</span>{{$diskStats.Avail}}</div>
+			</div>
+			{{end}}
+		</div>
+	</div>
+	<div class="statistics_box">
+		<div class="statistics_box_title">QUEUE / CACHE</div>
+		<div class="statistics_box_content">
+			<div><span class="bold">Queue Elems</span>{{.MvBufferElems}}</div>
+			<div><span class="bold">Queue Size</span>{{.MvBufferSize}}</div>
+			<div><span class="bold">Cache refreshed</span> {{print .CacheResfreshed}}</div>
+			<div>
+				<form action="/cache/update">
+					<input type="submit" value="Update cache">
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div>
 {{if .PathInfo }}
 {{$stl :=  .SeriesTargets }}
 <table>
   <colgroup>
-		<col><!-- Path -->
-		<col width="200px" align="center"><!-- Torrent Status -->
-		<col width="500px" align="center"><!-- Move Status -->
+		<col width="50%"><!-- Path -->
+		<col width="20%" align="center"><!-- Torrent Status -->
+		<col width="30%" align="center"><!-- Move Status -->
   </colgroup>
 	<tr>
 		<th>Path</th>
@@ -128,9 +127,9 @@
 {{if .PathInfoHistory }}
 <table>
   <colgroup>
-		<col><!-- Path -->
-		<col width="200px"><!-- Torrent Status -->
-		<col width="500px"><!-- Move Status -->
+		<col width="50%"><!-- Path -->
+		<col width="20%"><!-- Torrent Status -->
+		<col width="30%"><!-- Move Status -->
   </colgroup>
 	<tr>
 		<th>Path</th>
@@ -174,6 +173,6 @@
   {{end}}
 </table>
 {{end}}
+</div>
 
-</body>
-</html>
+{{end}}
