@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
+	// "time"
 )
 
 var (
@@ -160,13 +160,15 @@ func pathInfoPageHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request
 
 	mvBuffSize, mvBuffElems := s.moveServer.GetMvBuffSizeAndElems()
 
+	formattedCacheRefreshed := s.moveServer.GetCacheRefreshed().Format("15:04 02-01-2006")
+
 	sort.Sort(pathInfoList)
 	context := struct {
 		PathInfo        []moveserver.PathInfo
 		PathInfoHistory []moveserver.PathInfo
 		SeriesTargets   []string
 		Errors          []error
-		CacheResfreshed time.Time
+		CacheResfreshed string
 		MvBufferSize    int
 		MvBufferElems   int
 		CustomLinks     map[string]string
@@ -178,7 +180,7 @@ func pathInfoPageHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request
 		Errors: []error{
 			postErr,
 		},
-		CacheResfreshed: s.moveServer.GetCacheRefreshed(),
+		CacheResfreshed: formattedCacheRefreshed,
 		MvBufferSize:    mvBuffSize,
 		MvBufferElems:   mvBuffElems,
 		CustomLinks:     s.links,

@@ -8,7 +8,6 @@ table, th, td {
   border: 1px solid gray;
 }
 th {
-	font-size: 16;
 	background: black;
 	color: white;
 	font-weight: bold;
@@ -35,7 +34,6 @@ tr:nth-child(even) {
 	font-weight: bold;
 }
 .torrent_name {
-  font-size: 16;
 	font-weight: bold;
 	display: block;
 }
@@ -70,7 +68,6 @@ tr:nth-child(even) {
 #nav {
 	height: 100%;
 	background-color:#eeeeee;
-	line-height:30px;
 	float:left;
 	margin-right: 1em;
 	padding: 5px;
@@ -112,21 +109,7 @@ tr:nth-child(even) {
 	margin-bottom: 1em;
 	width: 100%;
 }
-.statistics_box {
-	float: left;
-	margin-right: 1em;
-	border-left: 1px solid black;
-	width: 30%;
-}
-.statistics_box_title {
-	text-align:center;
-	background: black;
-	color: white;
-}
-.statistics_box_content {
-	padding: 1em;
-}
-.statistics_box_content span {
+.navbox_content .subtitle {
 	margin-right: 1em;
 	display: block;
 	float: left;

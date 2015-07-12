@@ -1,24 +1,24 @@
-{{define "section"}}
+{{define "navpane"}}
 <!-- Curent Paths -->
-<div id="statistics">
-	<div class="statistics_box">
-		<div class="statistics_box_title">DISKS</div>
-		<div class="statistics_box_content">
+<div id="navbox">
+	<div class="navbox">
+		<div class="navbox_title">DISKS</div>
+		<div class="navbox_content">
 			{{range $idx, $diskStats := .DiskStats}}
 			<div class="disk_stats">
-				<div><span class="bold">Path</span>{{$diskStats.Path}}</div>
-				<div><span class="bold">Disk Size</span>{{$diskStats.Size}}</div>
-				<div><span class="bold">Empty Space</span>{{$diskStats.Avail}}</div>
+				<div><span class="bold subtitle">Path</span>{{$diskStats.Path}}</div>
+				<div><span class="bold subtitle">Disk Size</span>{{$diskStats.Size}}</div>
+				<div><span class="bold subtitle">Empty Space</span>{{$diskStats.Avail}}</div>
 			</div>
 			{{end}}
 		</div>
 	</div>
-	<div class="statistics_box">
-		<div class="statistics_box_title">QUEUE / CACHE</div>
-		<div class="statistics_box_content">
-			<div><span class="bold">Queue Elems</span>{{.MvBufferElems}}</div>
-			<div><span class="bold">Queue Size</span>{{.MvBufferSize}}</div>
-			<div><span class="bold">Cache refreshed</span> {{print .CacheResfreshed}}</div>
+	<div class="navbox">
+		<div class="navbox_title">QUEUE / CACHE</div>
+		<div class="navbox_content">
+			<div><span class="bold subtitle">Queue Elems</span>{{.MvBufferElems}}</div>
+			<div><span class="bold subtitle">Queue Size</span>{{.MvBufferSize}}</div>
+			<div><span class="bold subtitle">Cache refreshed</span> {{print .CacheResfreshed}}</div>
 			<div>
 				<form action="/cache/update">
 					<input type="submit" value="Update cache">
@@ -27,7 +27,9 @@
 		</div>
 	</div>
 </div>
+{{end}}
 
+{{define "section"}}
 <div>
 {{if .PathInfo }}
 {{$stl :=  .SeriesTargets }}
