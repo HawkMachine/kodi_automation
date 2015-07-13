@@ -110,6 +110,12 @@ func updateCacheHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request)
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
+func updateDiskStatsHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request) {
+	log.Printf("Received disk stats POST request %v", r)
+	s.moveServer.UpdateDiskStatsAsync()
+	http.Redirect(w, r, "/", http.StatusFound)
+}
+
 func transmissionPageHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request) {
 	t, err := s.GetTemplate("transmission_page")
 	if err != nil {
@@ -265,6 +271,7 @@ func main() {
 	http.HandleFunc("/transmission", MakeHandler(server, transmissionPageHandler))
 	http.HandleFunc("/move", MakeHandler(server, movePostHandler))
 	http.HandleFunc("/update/cache", MakeHandler(server, updateCacheHandler))
+	http.HandleFunc("/update/disks", MakeHandler(server, updateDiskStatsHandler))
 	http.Handle("/resources/", http.StripPrefix("/resources/", http.FileServer(http.Dir("resources"))))
 
 	bindAddr := fmt.Sprintf(":%d", *PORT)

@@ -441,6 +441,7 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []transmission.TorrentIn
 		newPathInfo[path] = pi
 	}
 
+	s.cacheRefreshed = time.Now()
 	s.pathInfo = newPathInfo
 }
 
