@@ -319,6 +319,11 @@ func (s *MoveServer) Move(path string, to string) error {
 	if pi.MoveInfo.Moving {
 		return fmt.Errorf("Requested move path %s is currently in move to %s", pi.MoveInfo.Target)
 	}
+	if _, err := os.Stat(path); err != nil && os.IsNotExist(err) {
+		pi.MoveInfo.LastError = err
+		s.pathInfo[path] = pi
+		return err
+	}
 
 	// ------------ Target verification ---------------
 	var target string
@@ -400,7 +405,7 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []transmission.TorrentIn
 	oldPathInfo := s.pathInfo
 	newPathInfo := map[string]PathInfo{}
 	for _, path := range paths {
-		s.pathInfo[path] = PathInfo{
+		newPathInfo[path] = PathInfo{
 			Name:      filepath.Base(path),
 			Path:      path,
 			AllowMove: true,
@@ -409,7 +414,7 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []transmission.TorrentIn
 	}
 	// Copy MoveInfo and TorrentInfo from old data.
 	for _, opi := range oldPathInfo {
-		pi, ok := s.pathInfo[opi.Path]
+		pi, ok := newPathInfo[opi.Path]
 		if ok {
 			pi.MoveInfo = opi.MoveInfo
 
@@ -428,7 +433,7 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []transmission.TorrentIn
 	// Update path info with torrents info.
 	for _, nti := range ntis {
 		path := filepath.Join(nti.DownloadDir, nti.Name)
-		pi, ok := s.pathInfo[path]
+		pi, ok := newPathInfo[path]
 		if ok {
 			pi.TorrentInfo = nti
 			newPathInfo[path] = pi

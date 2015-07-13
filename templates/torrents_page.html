@@ -123,14 +123,14 @@
 							<span class="darkblue_bold">Not allowed because torrent not finished yet.</span>
 						{{end}}
 					{{else}}
-							<span class="darkblue_bold">Not allowed because torrent not finished yet.</span>
+							<span class="darkblue_bold">Not allowed to move but no torrent info. ????</span>
 					{{end}}
 					</div>
 				{{end}}
-			  {{if $pathInfo.MoveInfo.LastError}}
-					<div><span class="darkred_bold">Last move error:</span> {{print $pathInfo.MoveInfo.LastError}}</div>
-					<div>{{$pathInfo.MoveInfo.LastErrorOutput}}</div>
-				{{end}}
+			{{end}}
+			{{if $pathInfo.MoveInfo.LastError}}
+				<div><span class="darkred_bold">Last move error:</span> {{print $pathInfo.MoveInfo.LastError}}</div>
+				<div>{{$pathInfo.MoveInfo.LastErrorOutput}}</div>
 			{{end}}
     </td>
   </tr>

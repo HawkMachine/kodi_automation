@@ -166,7 +166,7 @@ func pathInfoPageHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request
 
 	mvBuffSize, mvBuffElems := s.moveServer.GetMvBuffSizeAndElems()
 
-	formattedCacheRefreshed := s.moveServer.GetCacheRefreshed().Format("15:04 02-01-2006")
+	formattedCacheRefreshed := s.moveServer.GetCacheRefreshed().Format("15:04:05 02-01-2006")
 
 	sort.Sort(pathInfoList)
 	context := struct {
