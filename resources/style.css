@@ -110,6 +110,7 @@ tr:nth-child(even) {
 	width: 100%;
 }
 .navbox_content .subtitle {
+	font-weight: bold;
 	margin-right: 1em;
 	display: block;
 	float: left;
@@ -124,4 +125,8 @@ tr:nth-child(even) {
 iframe {
 	height: 800px;
 	width: 100%;
+}
+.pathinfo_table {
+	width: 100%;
+	margin-bottom: 1em;
 }

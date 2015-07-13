@@ -106,7 +106,7 @@ func movePostHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request) {
 
 func updateCacheHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request) {
 	log.Printf("Received cache update POST request %v", r)
-	s.moveServer.UpdateCache()
+	s.moveServer.UpdateCacheAsync()
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
@@ -264,7 +264,7 @@ func main() {
 	http.HandleFunc("/", MakeHandler(server, pathInfoPageHandler))
 	http.HandleFunc("/transmission", MakeHandler(server, transmissionPageHandler))
 	http.HandleFunc("/move", MakeHandler(server, movePostHandler))
-	http.HandleFunc("/cache/update", MakeHandler(server, updateCacheHandler))
+	http.HandleFunc("/update/cache", MakeHandler(server, updateCacheHandler))
 	http.Handle("/resources/", http.StripPrefix("/resources/", http.FileServer(http.Dir("resources"))))
 
 	bindAddr := fmt.Sprintf(":%d", *PORT)

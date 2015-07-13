@@ -6,21 +6,28 @@
 		<div class="navbox_content">
 			{{range $idx, $diskStats := .DiskStats}}
 			<div class="disk_stats">
-				<div><span class="bold subtitle">Path</span>{{$diskStats.Path}}</div>
-				<div><span class="bold subtitle">Disk Size</span>{{$diskStats.Size}}</div>
-				<div><span class="bold subtitle">Empty Space</span>{{$diskStats.Avail}}</div>
+				<div><span class="subtitle">Path</span>{{$diskStats.Path}}</div>
+				<div><span class="subtitle">Disk Size</span>{{$diskStats.Size}}</div>
+				<div><span class="subtitle">Empty Space</span>{{$diskStats.Avail}}</div>
 			</div>
 			{{end}}
+			<div>
+				<div><span class="subtitle">Update</span>
+					<form action="/update/disks">
+						<input type="submit" value="Update disk stats">
+					</form>
+				</div>
+			</div>
 		</div>
 	</div>
 	<div class="navbox">
 		<div class="navbox_title">QUEUE / CACHE</div>
 		<div class="navbox_content">
-			<div><span class="bold subtitle">Queue Elems</span>{{.MvBufferElems}}</div>
-			<div><span class="bold subtitle">Queue Size</span>{{.MvBufferSize}}</div>
-			<div><span class="bold subtitle">Cache refreshed</span> {{print .CacheResfreshed}}</div>
-			<div>
-				<form action="/cache/update">
+			<div><span class="subtitle">Queue Elems</span>{{.MvBufferElems}}</div>
+			<div><span class="subtitle">Queue Size</span>{{.MvBufferSize}}</div>
+			<div><span class="subtitle">Cache refreshed</span> {{print .CacheResfreshed}}</div>
+			<div><span class="subtitle">Update</span>
+				<form action="/update/cache">
 					<input type="submit" value="Update cache">
 				</form>
 			</div>
@@ -33,11 +40,12 @@
 <div>
 {{if .PathInfo }}
 {{$stl :=  .SeriesTargets }}
+<div class="pathinfo_table">
 <table>
   <colgroup>
-		<col width="50%"><!-- Path -->
-		<col width="20%" align="center"><!-- Torrent Status -->
-		<col width="30%" align="center"><!-- Move Status -->
+		<col style="width: 50%"><!-- Path -->
+		<col style="width: 20%" align="center"><!-- Torrent Status -->
+		<col style="width: 30%" align="center"><!-- Move Status -->
   </colgroup>
 	<tr>
 		<th>Path</th>
@@ -48,9 +56,9 @@
   <tr>
 		<!-- Path Column -->
     <td>
-			<span class="torrent_name path" id="path_{{print $idx}}">▶ {{print $pathInfo.Path }}</span>
+			<span class="torrent_name path" id="path_{{$idx}}">▶ {{print $pathInfo.Path }}</span>
       {{if $pathInfo.TorrentInfo }}
-			<div class="expandable" id="listing_{{print $idx}}" style="display: none">
+			<div class="expandable" id="listing_{{$idx}}" style="display: none">
         <ul>
         {{ range $idx, $torrentFileInfo := $pathInfo.TorrentInfo.Files }}
 				<li><span class="path">{{print $torrentFileInfo.Name}}</span></li>
@@ -59,8 +67,8 @@
       </div>
 			<script>
 				$(function() {
-					$("#path_{{print $idx}}").click(function() {
-						$("#listing_{{print $idx}}").toggle("fold", {}, 500)
+					$("#path_{{$idx}}").click(function() {
+						$("#listing_{{$idx}}").toggle("fold", {}, 500)
 					});
 				});
 			</script>
@@ -76,7 +84,7 @@
 					<span class="torrent_state darkred_bold">Not Finished</span>
 				{{end}}
 			{{else}}
-					<span class="torrent_state darkblue_bold">No Torrent Info</span>
+					<span class="torrent_state darkblue_bold">Missing</span>
       {{end}}
     </td>
 
@@ -86,10 +94,8 @@
 				<span class="darkblue_bold">MOVING TO</span>
 				<span class="target path">{{print $pathInfo.MoveInfo.Target}}</span>
 			{{else}}
-			  {{if $pathInfo.MoveInfo.Error}}
-					<span class="darkred_bold">Last move error: {{print $pathInfo.MoveInfo.Error}}</span>
-				{{end}}
 				{{if $pathInfo.AllowMove}}
+					<div>
 				  {{if not $pathInfo.TorrentInfo}}
 					  <span class="darkblue_bold">No torrent info - be careful what you move</span>
 					{{end}}
@@ -107,7 +113,9 @@
 						<input type="hidden" name="path" value="{{print $pathInfo.Path}}">
 						<input type="hidden" name="type" value="move">
 					</form>
+					</div>
 				{{else}}
+				  <div>
 				  {{if $pathInfo.TorrentInfo}}
 						{{if $pathInfo.TorrentInfo.IsFinished}}
 							<span class="darkblue_bold">Not allowed to move path but torrent is finished. ????</span>
@@ -117,21 +125,28 @@
 					{{else}}
 							<span class="darkblue_bold">Not allowed because torrent not finished yet.</span>
 					{{end}}
+					</div>
+				{{end}}
+			  {{if $pathInfo.MoveInfo.LastError}}
+					<div><span class="darkred_bold">Last move error:</span> {{print $pathInfo.MoveInfo.LastError}}</div>
+					<div>{{$pathInfo.MoveInfo.LastErrorOutput}}</div>
 				{{end}}
 			{{end}}
     </td>
   </tr>
   {{end}}
 </table>
+</div>
 {{end}}
 
 <!-- History of paths -->
 {{if .PathInfoHistory }}
+<div class="pathinfo_table">
 <table>
   <colgroup>
-		<col width="50%"><!-- Path -->
-		<col width="20%"><!-- Torrent Status -->
-		<col width="30%"><!-- Move Status -->
+		<col style="width: 50%"><!-- Path -->
+		<col style="width: 20%" align="center"><!-- Torrent Status -->
+		<col style="width: 30%" align="center"><!-- Move Status -->
   </colgroup>
 	<tr>
 		<th>Path</th>
@@ -142,15 +157,22 @@
   <tr>
 		<!-- Path Column -->
     <td>
-      <span class="torrent_name path">{{print $pathInfo.Path }}</span>
+			<span id="history_path_{{$idx}}" class="torrent_name path">▶ {{print $pathInfo.Path }}</span>
       {{if $pathInfo.TorrentInfo }}
-      <div>
+			<div id="history_listing_{{$idx}}" style="display: none">
         <ul>
         {{ range $idx, $torrentFileInfo := $pathInfo.TorrentInfo.Files }}
 				<li><span class="path">{{print $torrentFileInfo.Name}}</span></li>
         {{end}}
         </ul>
       </div>
+			<script>
+				$(function() {
+					$("#history_path_{{$idx}}").click(function() {
+						$("#history_listing_{{$idx}}").toggle("fold", {}, 500)
+					});
+				});
+			</script>
       {{end}}
 		</td>
 
@@ -174,6 +196,7 @@
 
   {{end}}
 </table>
+</div>
 {{end}}
 </div>
 

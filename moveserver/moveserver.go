@@ -54,64 +54,97 @@ func moveListener(s *MoveServer, ch chan MoveListenerRequest) {
 		req := <-ch
 		log.Printf("Received move requests %v", req)
 
-		err := exec.Command("mv", req.Request.Path, req.Request.To).Run()
-		if err != nil {
-			s.SetPathMoveError(req.Request.Path, err)
-		} else {
-			s.SetPathMoved(req.Request.Path)
+		bytes, err := exec.Command("mv", req.Request.Path, req.Request.To).Output()
+		log.Printf("Move result: err: %v; output: %s", err, string(bytes))
+		s.SetPathMoveResult(req.Request.Path, err, string(bytes))
+	}
+}
+
+func updateDiskStats(s *MoveServer) {
+	regex := regexp.MustCompile(`([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)%\s+(.*)`)
+	bytes, err := exec.Command("df", "-h").Output()
+	if err != nil {
+		log.Printf("df -h: %v", err)
+		s.setDiskStats(nil)
+	} else {
+		ds := []DiskStats{}
+		output := string(bytes)
+		for _, line := range strings.Split(string(output), "\n")[1:] {
+			grs := regex.FindStringSubmatch(line)
+			if grs == nil {
+				continue
+			}
+			//size, err1 := strconv.ParseInt(grs[2], 10, 64)
+			//used, err2 := strconv.ParseInt(grs[3], 10, 64)
+			//avail, err3 := strconv.ParseInt(grs[4], 10, 64)
+			//if err1 != nil || err2 != nil || err3 != nil {
+			//	log.Printf("Atoi errors: %v, %v, %v", err1, err2, err3)
+			//	continue
+			//}
+			if grs != nil {
+				ds = append(ds, DiskStats{
+					Path:       grs[6],
+					Filesystem: grs[1],
+					Size:       grs[2], //size,
+					Used:       grs[3], // used,
+					Avail:      grs[4], //avail,
+				})
+			}
 		}
+		log.Print("Disk stats:")
+		for _, x := range ds {
+			log.Printf("   %#v", x)
+		}
+		s.setDiskStats(ds)
 	}
 }
 
 func diskStatsUpdater(s *MoveServer, d time.Duration) {
-	cmd := exec.Command("df", "-h")
 	// regex := regexp.MustCompile(`([^\s]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)%\s+(.*)`)
-	regex := regexp.MustCompile(`([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)%\s+(.*)`)
 	for {
-		bytes, err := cmd.Output()
-		if err != nil {
-			s.setDiskStats(nil)
-		} else {
-			ds := []DiskStats{}
-			output := string(bytes)
-			for _, line := range strings.Split(string(output), "\n")[1:] {
-				grs := regex.FindStringSubmatch(line)
-				if grs == nil {
-					continue
-				}
-				//size, err1 := strconv.ParseInt(grs[2], 10, 64)
-				//used, err2 := strconv.ParseInt(grs[3], 10, 64)
-				//avail, err3 := strconv.ParseInt(grs[4], 10, 64)
-				//if err1 != nil || err2 != nil || err3 != nil {
-				//	log.Printf("Atoi errors: %v, %v, %v", err1, err2, err3)
-				//	continue
-				//}
-				if grs != nil {
-					ds = append(ds, DiskStats{
-						Path:       grs[6],
-						Filesystem: grs[1],
-						Size:       grs[2], //size,
-						Used:       grs[3], // used,
-						Avail:      grs[4], //avail,
-					})
-				}
-			}
-			log.Print("Disk stats:")
-			for _, x := range ds {
-				log.Printf("   %#v", x)
-			}
-			s.setDiskStats(ds)
-		}
+		updateDiskStats(s)
 		time.Sleep(d)
 	}
 }
 
+func updateCache(s *MoveServer) {
+	log.Printf("Updating cached info.")
+	paths, err := directoryListing(s.sourceDir, 1, false)
+	sl, slErr := getSeriesTargetListing(s.seriesTarget)
+	tis, _ := s.transmissionCli.GetTorrents(s.sourceDir)
+
+	if err != nil || slErr != nil {
+		log.Printf(fmt.Sprintf("Update cached info errors: %v; %v", err, slErr))
+	} else {
+		s.setCachedInfo(paths, tis, sl)
+	}
+}
+
+func cacheUpdater(s *MoveServer, d time.Duration) {
+	for {
+		updateCache(s)
+		time.Sleep(d)
+	}
+}
+
+func (s *MoveServer) UpdateCacheAsync() {
+	go func() {
+		updateCache(s)
+	}()
+}
+
+func (s *MoveServer) UpdateDiskStatsAsync() {
+	go func() {
+		updateDiskStats(s)
+	}()
+}
+
 // PathInfo has all the information kept on Server about paths in the Download directory.
 type PathMoveInfo struct {
-	Moving bool
-	Error  error
-	Target string
-	WorkId int
+	Moving          bool
+	Target          string
+	LastError       error
+	LastErrorOutput string
 }
 
 type PathInfo struct {
@@ -177,13 +210,8 @@ func New(sourceDir string, moviesTarget string, seriesTarget string, maxMvComand
 	for i := 0; i < maxMvComands; i++ {
 		go moveListener(s, s.moveChannel)
 	}
-	go func(d time.Duration) {
-		for {
-			s.UpdateCache()
-			time.Sleep(d)
-		}
-	}(3 * time.Minute)
-	go diskStatsUpdater(s, 3*time.Minute)
+	go cacheUpdater(s, 5*time.Minute)
+	go diskStatsUpdater(s, 5*time.Minute)
 
 	return s, nil
 }
@@ -301,7 +329,7 @@ func (s *MoveServer) Move(path string, to string) error {
 		target, err = s.getTargetForSeriesMove(path, to)
 	}
 	if err != nil {
-		pi.MoveInfo.Error = err
+		pi.MoveInfo.LastError = err
 		s.pathInfo[path] = pi
 		return err
 	}
@@ -310,11 +338,9 @@ func (s *MoveServer) Move(path string, to string) error {
 	}
 
 	// Actually making a move.
-	pi.MoveInfo = PathMoveInfo{
-		Moving: true,
-		Target: target,
-		Error:  pi.MoveInfo.Error, // remember last error
-	}
+	pi.MoveInfo.Moving = true
+	pi.MoveInfo.Target = target
+
 	s.moveChannel <- MoveListenerRequest{
 		Request: MoveRequest{
 			Path: path,
@@ -325,7 +351,7 @@ func (s *MoveServer) Move(path string, to string) error {
 	return nil
 }
 
-func (s *MoveServer) SetPathMoved(path string) error {
+func (s *MoveServer) SetPathMoveResult(path string, err error, output string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -333,24 +359,23 @@ func (s *MoveServer) SetPathMoved(path string) error {
 	if !ok {
 		return fmt.Errorf("path not found")
 	}
-	pi.MoveInfo.Moving = false
-	pi.MoveInfo.Error = nil
-	delete(s.pathInfo, path)
-	s.pathInfoHistory = append(s.pathInfoHistory, pi)
-	return nil
-}
 
-func (s *MoveServer) SetPathMoveError(path string, err error) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	pi, ok := s.pathInfo[path]
-	if !ok {
-		return fmt.Errorf("path not found")
+	pi.AllowMove = false
+	pi.MoveInfo = PathMoveInfo{
+		Moving:          false,
+		Target:          pi.MoveInfo.Target,
+		LastError:       err,
+		LastErrorOutput: output,
 	}
-	pi.MoveInfo.Moving = false
-	pi.MoveInfo.Error = err
-	s.pathInfo[path] = pi
+	if err == nil {
+		// Successful move.
+		delete(s.pathInfo, path)
+		s.pathInfoHistory = append(s.pathInfoHistory, pi)
+	} else {
+		// Unsuccessful move.
+		pi.MoveInfo.Target = ""
+		s.pathInfo[path] = pi
+	}
 	return nil
 }
 
@@ -359,71 +384,64 @@ func (s *MoveServer) loadTorrentsInfo() ([]transmission.TorrentInfo, error) {
 	return s.transmissionCli.GetTorrents(s.sourceDir)
 }
 
-func (s *MoveServer) updatePathInfoCache() error {
-	// Try updating cache if it's the first time
-	log.Printf("Updating path info cache")
-	// Retrieve current data.
-	tis, _ := s.loadTorrentsInfo()
-	paths, err := directoryListing(s.sourceDir, 1, false)
+func getSeriesTargetListing(seriesTarget string) ([]string, error) {
+	listing, err := directoryListing(seriesTarget, 2, true)
 	if err != nil {
-		log.Printf("Directory listing error: %v", err)
-		return err
+		return nil, err
 	}
-
-	// Update server with new information.
-	pathInfoHistory := s.pathInfo
-	s.cacheRefreshed = time.Now()
-	s.pathInfo = map[string]PathInfo{}
-	for _, path := range paths {
-		if pi, ok := pathInfoHistory[path]; ok {
-			s.pathInfo[path] = pi
-		} else {
-			s.pathInfo[path] = PathInfo{
-				Path:      path,
-				AllowMove: true,
-				MoveInfo: PathMoveInfo{
-					Moving: false,
-				},
-			}
-		}
-	}
-
-	// Update torrent info for paths.
-	if tis != nil {
-		for _, ti := range tis {
-			for i := range s.pathInfo {
-				if s.pathInfo[i].Path == filepath.Join(ti.DownloadDir, ti.Name) {
-					pi := s.pathInfo[i]
-					pi.TorrentInfo = ti
-					pi.AllowMove = ti.IsFinished
-					s.pathInfo[i] = pi
-				}
-			}
-		}
-	}
-	return nil
+	return listing, nil
 }
 
-func (s *MoveServer) updateSeriesTargetListing() error {
-	listing, err := directoryListing(s.seriesTarget, 2, true)
-	if err != nil {
-		return err
-	}
-	s.seriesTargetListing = listing
-	return nil
-}
-
-func (s *MoveServer) UpdateCache() error {
+func (s *MoveServer) setCachedInfo(paths []string, ntis []transmission.TorrentInfo, nstl []string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	piErr := s.updatePathInfoCache()
-	slErr := s.updateSeriesTargetListing()
-
-	if piErr != nil || slErr != nil {
-		return fmt.Errorf(fmt.Sprintf("UpdateCache errors: %v %v", piErr, slErr))
+	// Set new info.
+	oldPathInfo := s.pathInfo
+	newPathInfo := map[string]PathInfo{}
+	for _, path := range paths {
+		s.pathInfo[path] = PathInfo{
+			Name:      filepath.Base(path),
+			Path:      path,
+			AllowMove: true,
+			MoveInfo:  PathMoveInfo{},
+		}
 	}
-	return nil
+	// Copy MoveInfo and TorrentInfo from old data.
+	for _, opi := range oldPathInfo {
+		pi, ok := s.pathInfo[opi.Path]
+		if ok {
+			pi.MoveInfo = opi.MoveInfo
+
+			// Copy old torrent info only if the new torrent info is nil (there was an
+			// error while getting torrents info) or that path is currently moved
+			// (torrent may have been deleted from transmission.
+			var ti transmission.TorrentInfo
+			if ntis == nil || pi.MoveInfo.Moving {
+				ti = pi.TorrentInfo
+			}
+			pi.TorrentInfo = ti
+
+			newPathInfo[opi.Path] = pi
+		}
+	}
+	// Update path info with torrents info.
+	for _, nti := range ntis {
+		path := filepath.Join(nti.DownloadDir, nti.Name)
+		pi, ok := s.pathInfo[path]
+		if ok {
+			pi.TorrentInfo = nti
+			newPathInfo[path] = pi
+		}
+	}
+	// Update AllowMove
+	for _, path := range paths {
+		pi := newPathInfo[path]
+		pi.AllowMove = pi.TorrentInfo.IsFinished && !pi.MoveInfo.Moving
+		newPathInfo[path] = pi
+	}
+
+	s.pathInfo = newPathInfo
 }
 
 func (s *MoveServer) setDiskStats(nds []DiskStats) {
@@ -437,11 +455,4 @@ func (s *MoveServer) setDiskStats(nds []DiskStats) {
 		}
 	}
 	s.diskStats = diskStats
-}
-
-func (s *MoveServer) UpdateSeriesTargetListing() error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	return s.updateSeriesTargetListing()
 }
