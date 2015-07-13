@@ -54,7 +54,7 @@ func moveListener(s *MoveServer, ch chan MoveListenerRequest) {
 		req := <-ch
 		log.Printf("Received move requests %v", req)
 
-		bytes, err := exec.Command("mv", req.Request.Path, req.Request.To).Output()
+		bytes, err := exec.Command("mv", req.Request.Path, req.Request.To).CombinedOutput()
 		log.Printf("Move result: err: %v; output: %s", err, string(bytes))
 		s.SetPathMoveResult(req.Request.Path, err, string(bytes))
 	}
