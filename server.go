@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	// "time"
 )
 
 var (
@@ -127,8 +126,10 @@ func transmissionPageHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Req
 		Errors          []error
 		TransmissionURL string
 		CustomLinks     map[string]string
+		IsMobile        bool
 	}{
 		TransmissionURL: s.transmissionURL,
+		IsMobile:        IsMobile(r),
 	}
 	err = t.ExecuteTemplate(w, "base", context)
 	if err != nil {
@@ -137,7 +138,14 @@ func transmissionPageHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Req
 	}
 }
 
+func IsMobile(r *http.Request) bool {
+	// I'm so lazy...
+	return strings.Contains(r.UserAgent(), "Nexus")
+}
+
 func pathInfoPageHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request) {
+	var isMobile = IsMobile(r)
+
 	var err, postErr error
 	t, err := s.GetTemplate("torrents_page")
 	if err != nil {
@@ -179,6 +187,7 @@ func pathInfoPageHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request
 		MvBufferElems   int
 		CustomLinks     map[string]string
 		DiskStats       []moveserver.DiskStats
+		IsMobile        bool
 	}{
 		PathInfo:        pathInfoList,
 		PathInfoHistory: pathInfoHistoryList,
@@ -191,6 +200,7 @@ func pathInfoPageHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request
 		MvBufferElems:   mvBuffElems,
 		CustomLinks:     s.links,
 		DiskStats:       s.moveServer.GetDiskStats(),
+		IsMobile:        isMobile,
 	}
 	err = t.ExecuteTemplate(w, "base", context)
 	if err != nil {

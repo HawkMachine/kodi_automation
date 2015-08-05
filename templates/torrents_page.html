@@ -5,7 +5,7 @@
 		<div class="navbox_title">DISKS</div>
 		<div class="navbox_content">
 			{{range $idx, $diskStats := .DiskStats}}
-			<div class="disk_stats">
+			<div class="navbox_content_section">
 				<div><span class="subtitle">Path</span>{{$diskStats.Path}}</div>
 				<div><span class="subtitle">Disk Size</span>{{$diskStats.Size}}</div>
 				<div><span class="subtitle">Empty Space</span>{{$diskStats.Avail}}</div>
@@ -23,13 +23,17 @@
 	<div class="navbox">
 		<div class="navbox_title">QUEUE / CACHE</div>
 		<div class="navbox_content">
-			<div><span class="subtitle">Queue Elems</span>{{.MvBufferElems}}</div>
-			<div><span class="subtitle">Queue Size</span>{{.MvBufferSize}}</div>
-			<div><span class="subtitle">Cache refreshed</span> {{print .CacheResfreshed}}</div>
-			<div><span class="subtitle">Update</span>
-				<form action="/update/cache">
-					<input type="submit" value="Update cache">
-				</form>
+			<div class="navbox_content_section">
+				<div><span class="subtitle">Q Elems</span>{{.MvBufferElems}}</div>
+				<div><span class="subtitle">Q Size</span>{{.MvBufferSize}}</div>
+			</div>
+			<div class="navbox_content_section">
+				<div><span class="subtitle">Cache Refreshed</span> {{print .CacheResfreshed}}</div>
+				<div><span class="subtitle">Update</span>
+					<form action="/update/cache">
+						<input type="submit" value="Update cache">
+					</form>
+				</div>
 			</div>
 		</div>
 	</div>

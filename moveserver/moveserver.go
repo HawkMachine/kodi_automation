@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	//"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -74,13 +73,6 @@ func updateDiskStats(s *MoveServer) {
 			if grs == nil {
 				continue
 			}
-			//size, err1 := strconv.ParseInt(grs[2], 10, 64)
-			//used, err2 := strconv.ParseInt(grs[3], 10, 64)
-			//avail, err3 := strconv.ParseInt(grs[4], 10, 64)
-			//if err1 != nil || err2 != nil || err3 != nil {
-			//	log.Printf("Atoi errors: %v, %v, %v", err1, err2, err3)
-			//	continue
-			//}
 			if grs != nil {
 				ds = append(ds, DiskStats{
 					Path:       grs[6],
@@ -100,7 +92,6 @@ func updateDiskStats(s *MoveServer) {
 }
 
 func diskStatsUpdater(s *MoveServer, d time.Duration) {
-	// regex := regexp.MustCompile(`([^\s]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)%\s+(.*)`)
 	for {
 		updateDiskStats(s)
 		time.Sleep(d)

@@ -1,3 +1,12 @@
+body {
+	font-size: 2.5em;
+}
+input {
+	font-size: 100%;
+}
+select {
+	font-size: 100%;
+}
 table {
   border-collapse: collapse;
 }
@@ -68,10 +77,9 @@ tr:nth-child(even) {
 #nav {
 	height: 100%;
 	background-color:#eeeeee;
-	float:left;
 	margin-right: 1em;
 	padding: 5px;
-	width: 20%;
+	width: 100%;
 }
 .navbox {
 	margin-bottom: 1em;	
@@ -90,18 +98,17 @@ tr:nth-child(even) {
 
 /* Main section */
 #section {
-    width:70%;
-    float:left;
-    padding:10px;
+  width:100%;
+  padding:10px;
 }
 
 /* Footer */
 #footer {
-    background-color:black;
-    color:white;
-    clear:both;
-    text-align:center;
-    padding:5px;
+  background-color:black;
+  color:white;
+  clear:both;
+  text-align:center;
+  padding:5px;
 }
 /* Statistics box */
 #statistics {
@@ -114,7 +121,7 @@ tr:nth-child(even) {
 	margin-right: 1em;
 	display: block;
 	float: left;
-	width: 8em;
+	width: 10em;
 	text-align: right;
 }
 .navbox_content_section {
