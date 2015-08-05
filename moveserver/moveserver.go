@@ -439,6 +439,7 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []transmission.TorrentIn
 
 	s.cacheRefreshed = time.Now()
 	s.pathInfo = newPathInfo
+	s.seriesTargetListing = nstl
 }
 
 func (s *MoveServer) setDiskStats(nds []DiskStats) {
