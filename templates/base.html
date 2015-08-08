@@ -2,11 +2,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Kodi helper</title>
+	<title>Kodi helper - {{.Title}}</title>
 	{{if .IsMobile }}
-	<link rel="stylesheet" type="text/css" href="/resources/m_style.css">
+		<link rel="stylesheet" type="text/css" href="/resources/m_style.css">
 	{{else}}
-	<link rel="stylesheet" type="text/css" href="/resources/style.css">
+		<link rel="stylesheet" type="text/css" href="/resources/style.css">
 	{{end}}
 	<script src="//code.jquery.com/jquery-1.10.2.js" type="text/javascript"></script>
 	<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js" type="text/javascript"></script>
@@ -18,21 +18,26 @@
 		<div class="navbox_title">LINKS</div>
 		<div class="navbox_content">
 			<div>■ <a href="/">Home</a></div>
-			<div>■ <a href="/transmission">Transmission</a></div>
-			{{if .CustomLinks}}
-			{{range $name, $url := .CustomLinks}}
-			<div>■ <a href="{{print $url}}">{{print $name}}</a></div>
+			{{if .Links}}
+				{{range $name, $url := .Links}}
+					<div>■ <a href="{{print $url}}">{{print $name}}</a> {{$name}} {{$url}}</div>
+				{{end}}
 			{{end}}
+
+			{{if .IframeLinks}}
+				{{range $name, $url := .IframeLinks}}
+					<div>■ <a href="/wrap/{{print $name}}">{{print $name}}</a></div>
+				{{end}}
 			{{end}}
 		</div>
 	</div>
-	{{template "navpane" .}}
+	{{template "navpane" .ContentContext}}
 </div>
 
 <div id="contents">
 	<!-- Errors -->
 	{{range $idx, $error := .Errors }}
-		{{if $error }}
+		{{if $error}}
 		<div class="errorbox">
 			<span class="errorheader">ERROR</span>
 			{{print $error}}
@@ -40,11 +45,14 @@
 		{{end}}
 	{{end}}
 
+	{{if .Title}}<h1>{{.Title}}</h1>{{end}}
 	<div id="section">
-	{{template "section" .}}
+	{{template "section" .ContentContext}}
 	</div>
 </div>
 
 </body>
 </html>
 {{end}}
+{{define "navpane"}}{{end}}
+{{define "section"}}{{end}}

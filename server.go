@@ -13,14 +13,14 @@ import (
 )
 
 var (
-	MV_BUFFER_SIZE   = flag.Int("mv_buffer_size", 5, "size of the mv request buffer")
-	MAX_MV_COMMANDS  = flag.Int("max_mv_commands", 5, "max mv commands running in parallel")
-	PORT             = flag.Int("port", 8080, "port to use")
-	SOURCE_DIR       = flag.String("source_dir", "", "directory to scan")
-	MOVIES_TARGET    = flag.String("movies_dir", "", "where to move movies")
-	SERIES_TARGET    = flag.String("series_dir", "", "where to move series")
-	CUSTOM_LINKS     = flag.String("custom_links", "", "comma-delimited list of <link name>:<url>")
-	TRANSMISSION_URL = flag.String("transmission_url", "", "transmission URL")
+	MV_BUFFER_SIZE      = flag.Int("mv_buffer_size", 5, "size of the mv request buffer")
+	MAX_MV_COMMANDS     = flag.Int("max_mv_commands", 5, "max mv commands running in parallel")
+	PORT                = flag.Int("port", 8080, "port to use")
+	SOURCE_DIR          = flag.String("source_dir", "", "directory to scan")
+	MOVIES_TARGET       = flag.String("movies_dir", "", "where to move movies")
+	SERIES_TARGET       = flag.String("series_dir", "", "where to move series")
+	CUSTOM_LINKS        = flag.String("links", "", "comma-delimited list of <link name>:<url>")
+	CUSTOM_IFRAME_LINKS = flag.String("iframe_links", "", "comma-delimited list of <link name>:<url>")
 )
 
 // -------------------- Server -------------------
@@ -40,23 +40,41 @@ func (pi PathInfoSlice) Swap(i, j int) {
 
 type MyHttpServer struct {
 	parsedTemplates map[string]*template.Template
-	moveServer      *moveserver.MoveServer
-	links           map[string]string
-	transmissionURL string
+
+	moveServer *moveserver.MoveServer
+
+	links       map[string]string
+	iframeLinks map[string]string
 }
 
-func New(moveServer *moveserver.MoveServer, transmissionURL string, templates map[string][]string, links map[string]string) (*MyHttpServer, error) {
+type BasePageContext struct {
+	Title          string
+	IsMobile       bool
+	ContentContext interface{}
+	Links          map[string]string
+	IframeLinks    map[string]string
+	Errors         []string
+}
+
+func New(moveServer *moveserver.MoveServer, templates map[string][]string,
+	links map[string]string, iframeLinks map[string]string) (*MyHttpServer, error) {
+
 	if moveServer == nil {
 		return nil, fmt.Errorf("Move server cannot be null")
 	}
 	if links == nil {
 		links = map[string]string{}
 	}
+	if iframeLinks == nil {
+		iframeLinks = map[string]string{}
+	}
 	httpServer := &MyHttpServer{
 		parsedTemplates: map[string]*template.Template{},
-		links:           links,
-		moveServer:      moveServer,
-		transmissionURL: transmissionURL,
+
+		moveServer: moveServer,
+
+		links:       links,
+		iframeLinks: iframeLinks,
 	}
 	for name, paths := range templates {
 		t := template.Must(template.New(name).ParseFiles(paths...))
@@ -73,16 +91,35 @@ func (s *MyHttpServer) GetTemplate(name string) (*template.Template, error) {
 	return t, nil
 }
 
+func (s *MyHttpServer) GetBaseContext(title string, r *http.Request) BasePageContext {
+	return BasePageContext{
+		Title:       title,
+		IsMobile:    s.IsMobile(r),
+		Links:       s.links,
+		IframeLinks: s.iframeLinks,
+	}
+}
+
+func (s *MyHttpServer) GetIframeLink(name string) (string, bool) {
+	v, ok := s.iframeLinks[name]
+	return v, ok
+}
+
 func MakeHandler(s *MyHttpServer, h func(*MyHttpServer, http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		h(s, w, r)
 	}
 }
 
+func (s *MyHttpServer) IsMobile(r *http.Request) bool {
+	// I'm so lazy...
+	return strings.Contains(r.UserAgent(), "Nexus")
+}
+
 // -------------------- Page handlers -------------------
 
 func movePostHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request) {
-	log.Printf("Received move POST request %v", r)
+	log.Printf("Received move POST request", r)
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -97,9 +134,9 @@ func movePostHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request) {
 	default:
 		err = fmt.Errorf("Submitted POST has unrecognized type value: %s", messageType)
 	}
-	//	if err != nil {
-	//		http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	}
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
@@ -115,38 +152,7 @@ func updateDiskStatsHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Requ
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-func transmissionPageHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request) {
-	t, err := s.GetTemplate("transmission_page")
-	if err != nil {
-		fmt.Fprintf(w, err.Error())
-		return
-	}
-
-	context := struct {
-		Errors          []error
-		TransmissionURL string
-		CustomLinks     map[string]string
-		IsMobile        bool
-	}{
-		TransmissionURL: s.transmissionURL,
-		IsMobile:        IsMobile(r),
-	}
-	err = t.ExecuteTemplate(w, "base", context)
-	if err != nil {
-		fmt.Fprintf(w, fmt.Sprintf("Error: %v", err))
-		return
-	}
-}
-
-func IsMobile(r *http.Request) bool {
-	// I'm so lazy...
-	return strings.Contains(r.UserAgent(), "Nexus")
-}
-
 func pathInfoPageHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request) {
-	var isMobile = IsMobile(r)
-
-	var err, postErr error
 	t, err := s.GetTemplate("torrents_page")
 	if err != nil {
 		fmt.Fprintf(w, err.Error())
@@ -185,27 +191,48 @@ func pathInfoPageHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request
 		CacheResfreshed string
 		MvBufferSize    int
 		MvBufferElems   int
-		CustomLinks     map[string]string
 		DiskStats       []moveserver.DiskStats
-		IsMobile        bool
 	}{
 		PathInfo:        pathInfoList,
 		PathInfoHistory: pathInfoHistoryList,
 		SeriesTargets:   seriesTargets,
-		Errors: []error{
-			postErr,
-		},
 		CacheResfreshed: formattedCacheRefreshed,
 		MvBufferSize:    mvBuffSize,
 		MvBufferElems:   mvBuffElems,
-		CustomLinks:     s.links,
 		DiskStats:       s.moveServer.GetDiskStats(),
-		IsMobile:        isMobile,
 	}
-	err = t.ExecuteTemplate(w, "base", context)
+	baseContext := s.GetBaseContext("", r)
+	baseContext.ContentContext = context
+	err = t.ExecuteTemplate(w, "base", baseContext)
 	if err != nil {
-		fmt.Fprintf(w, fmt.Sprintf("Error: %v", err))
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func wrapHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request) {
+	name := r.URL.Path[len("/wrap/"):]
+	url, ok := s.GetIframeLink(name)
+	fmt.Printf(url)
+	if !ok {
+		http.Error(w, fmt.Sprintf("Page %v not found", name), http.StatusNotFound)
+	}
+
+	t, err := s.GetTemplate("wrap_page")
+	if err != nil {
+		fmt.Fprintf(w, err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	context := struct {
+		WrapURL string
+	}{
+		WrapURL: url,
+	}
+	baseContext := s.GetBaseContext(strings.Title(name), r)
+	baseContext.ContentContext = context
+	err = t.ExecuteTemplate(w, "base", baseContext)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
@@ -245,14 +272,15 @@ func main() {
 		*MV_BUFFER_SIZE = 5
 	}
 	links := parseCustomLinksFlag(*CUSTOM_LINKS)
+	iframeLinks := parseCustomLinksFlag(*CUSTOM_IFRAME_LINKS)
 	log.Printf("PORT             = %d", *PORT)
 	log.Printf("SOURCE_DIR       = %s", *SOURCE_DIR)
 	log.Printf("MOVIES_TARGET    = %s", *MOVIES_TARGET)
 	log.Printf("SERIES_TARGET    = %s", *SERIES_TARGET)
 	log.Printf("MAX_MV_COMMANDS  = %d", *MAX_MV_COMMANDS)
 	log.Printf("MV_BUFFER_SIZE   = %d", *MV_BUFFER_SIZE)
-	log.Printf("TRANSMISSION URL = %s", *TRANSMISSION_URL)
 	log.Printf("LINKS            = %v", links)
+	log.Printf("IFRAME LINKS     = %v", iframeLinks)
 
 	moveServer, err := moveserver.New(*SOURCE_DIR, *MOVIES_TARGET, *SERIES_TARGET, *MAX_MV_COMMANDS, *MV_BUFFER_SIZE)
 	if err != nil {
@@ -260,7 +288,6 @@ func main() {
 	}
 	server, err := New(
 		moveServer,
-		*TRANSMISSION_URL,
 		map[string][]string{
 			"torrents_page": {
 				"templates/base.html",
@@ -270,18 +297,24 @@ func main() {
 				"templates/base.html",
 				"templates/transmission_page.html",
 			},
+			"wrap_page": {
+				"templates/base.html",
+				"templates/wrap_page.html",
+			},
 		},
 		links,
+		iframeLinks,
 	)
 	if err != nil {
 		panic(err)
 	}
 
 	http.HandleFunc("/", MakeHandler(server, pathInfoPageHandler))
-	http.HandleFunc("/transmission", MakeHandler(server, transmissionPageHandler))
+	// http.HandleFunc("/transmission", MakeHandler(server, transmissionPageHandler))
 	http.HandleFunc("/move", MakeHandler(server, movePostHandler))
 	http.HandleFunc("/update/cache", MakeHandler(server, updateCacheHandler))
 	http.HandleFunc("/update/disks", MakeHandler(server, updateDiskStatsHandler))
+	http.HandleFunc("/wrap/", MakeHandler(server, wrapHandler))
 	http.Handle("/resources/", http.StripPrefix("/resources/", http.FileServer(http.Dir("resources"))))
 
 	bindAddr := fmt.Sprintf(":%d", *PORT)
