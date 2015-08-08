@@ -6,11 +6,37 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 var (
-	DIR = flag.String("dir", "", "directory to scan")
+	DIR  = flag.String("dir", "", "directory to scan")
+	EXTS = flag.String("exts", "", "extensions")
 )
+
+type Filter struct {
+	exts          []string
+	noFiles       bool
+	noDirectories bool
+}
+
+func containsString(list []string, s string) bool {
+	for _, e := range list {
+		if e == s {
+			return true
+		}
+	}
+	return false
+}
+
+func (f *Filter) Match(path string) bool {
+	if len(f.exts) > 0 {
+		if !containsString(f.exts, filepath.Ext(path)) {
+			return false
+		}
+	}
+	return true
+}
 
 func directoryListing(dirname string) ([]string, error) {
 	res := []string{}
@@ -57,10 +83,15 @@ func main() {
 		log.Fatal(err.Error())
 		return
 	}
+	filter := Filter{
+		exts: strings.Split(*EXTS, ","),
+	}
 	for basename, paths := range duplicates {
-		fmt.Printf("%s:\n", basename)
-		for _, path := range paths {
-			fmt.Println("    *", path)
+		if filter.Match(basename) {
+			fmt.Printf("%s:\n", basename)
+			for _, path := range paths {
+				fmt.Println("    *", path)
+			}
 		}
 	}
 }
