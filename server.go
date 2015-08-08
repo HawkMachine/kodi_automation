@@ -6,10 +6,12 @@ import (
 	"html/template"
 	"kodi_automation/moveserver"
 	"log"
+	"net"
 	"net/http"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 var (
@@ -21,6 +23,7 @@ var (
 	SERIES_TARGET       = flag.String("series_dir", "", "where to move series")
 	CUSTOM_LINKS        = flag.String("links", "", "comma-delimited list of <link name>:<url>")
 	CUSTOM_IFRAME_LINKS = flag.String("iframe_links", "", "comma-delimited list of <link name>:<url>")
+	WAIT_FOR_IP         = flag.Int("wait_for_ip", 300, "Seconds to wait for IP address")
 )
 
 // -------------------- Server -------------------
@@ -114,6 +117,23 @@ func MakeHandler(s *MyHttpServer, h func(*MyHttpServer, http.ResponseWriter, *ht
 func (s *MyHttpServer) IsMobile(r *http.Request) bool {
 	// I'm so lazy...
 	return strings.Contains(r.UserAgent(), "Nexus")
+}
+
+// http://stackoverflow.com/a/31551220
+// GetLocalIP returns the non loopback local IP of the host.
+func GetLocalIP() (string, error) {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return "", err
+	}
+	for _, address := range addrs {
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String(), nil
+			}
+		}
+	}
+	return "", nil
 }
 
 // -------------------- Page handlers -------------------
@@ -239,14 +259,25 @@ func wrapHandler(s *MyHttpServer, w http.ResponseWriter, r *http.Request) {
 func parseCustomLinksFlag(str string) map[string]string {
 	res := map[string]string{}
 	for _, item := range strings.Split(str, ",") {
+		if item == "" {
+			continue
+		}
 		link_items := strings.SplitN(item, ":", 2)
 		if len(link_items) < 2 {
-			log.Printf("Wrong flag format")
+			log.Printf("Wrong flag format: ", item)
 			continue
 		}
 		res[link_items[0]] = link_items[1]
 	}
 	return res
+}
+
+func replaceLocalHost(m map[string]string, ip string) map[string]string {
+	n := map[string]string{}
+	for k, v := range m {
+		n[k] = strings.Replace(v, "localhost", ip, 1)
+	}
+	return n
 }
 
 func main() {
@@ -271,14 +302,37 @@ func main() {
 	if *MV_BUFFER_SIZE <= 5 {
 		*MV_BUFFER_SIZE = 5
 	}
-	links := parseCustomLinksFlag(*CUSTOM_LINKS)
-	iframeLinks := parseCustomLinksFlag(*CUSTOM_IFRAME_LINKS)
 	log.Printf("PORT             = %d", *PORT)
 	log.Printf("SOURCE_DIR       = %s", *SOURCE_DIR)
 	log.Printf("MOVIES_TARGET    = %s", *MOVIES_TARGET)
 	log.Printf("SERIES_TARGET    = %s", *SERIES_TARGET)
 	log.Printf("MAX_MV_COMMANDS  = %d", *MAX_MV_COMMANDS)
 	log.Printf("MV_BUFFER_SIZE   = %d", *MV_BUFFER_SIZE)
+	log.Printf("WAIT FOR IP      = %d", *WAIT_FOR_IP)
+	log.Printf("LINKS            = %v", *CUSTOM_LINKS)
+	log.Printf("IFRAME LINKS     = %v", *CUSTOM_IFRAME_LINKS)
+
+	var ip string
+	start := time.Now()
+	deadline := start.Add(time.Duration(*WAIT_FOR_IP) * time.Second)
+	for {
+		if time.Now().After(deadline) {
+			log.Fatalf("Could not get local IP for %d seconds", *WAIT_FOR_IP)
+		}
+		ip, err = GetLocalIP()
+		if err != nil {
+			fmt.Printf("Got error while resolving IP: %v", err)
+		} else if ip != "" {
+			break
+		} else {
+			log.Printf("Resolved IP to empty string, %s left", deadline.Sub(time.Now()).String())
+		}
+		time.Sleep(time.Second * 5)
+	}
+
+	log.Printf("IP               = %s", ip)
+	links := replaceLocalHost(parseCustomLinksFlag(*CUSTOM_LINKS), ip)
+	iframeLinks := replaceLocalHost(parseCustomLinksFlag(*CUSTOM_IFRAME_LINKS), ip)
 	log.Printf("LINKS            = %v", links)
 	log.Printf("IFRAME LINKS     = %v", iframeLinks)
 
