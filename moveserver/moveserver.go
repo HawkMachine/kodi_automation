@@ -2,7 +2,6 @@ package moveserver
 
 import (
 	"fmt"
-	"kodi_automation/transmission"
 	"log"
 	"os"
 	"os/exec"
@@ -11,15 +10,17 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/HawkMachine/kodi_automation/transmission"
 )
 
-func directoryListing(dirname string, levels int, dirs_only bool) ([]string, error) {
+func directoryListing(dirname string, levels int, dirsOnly bool) ([]string, error) {
 	res := []string{}
 	err := filepath.Walk(dirname, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-		if dirs_only && !info.IsDir() {
+		if dirsOnly && !info.IsDir() {
 			return nil
 		}
 		tmp := path
