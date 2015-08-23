@@ -381,7 +381,7 @@ func main() {
 	http.HandleFunc("/update/cache", makeHandler(server, updateCacheHandler))
 	http.HandleFunc("/update/disks", makeHandler(server, updateDiskStatsHandler))
 	http.HandleFunc("/wrap/", makeHandler(server, wrapHandler))
-	http.Handle("/resources/", http.StripPrefix("/resources/", http.FileServer(http.Dir(*resourcesPath))
+	http.Handle("/resources/", http.StripPrefix("/resources/", http.FileServer(http.Dir(*resourcesPath))))
 
 	bindAddr := fmt.Sprintf(":%d", *port)
 	log.Printf("Bind address %s", bindAddr)
