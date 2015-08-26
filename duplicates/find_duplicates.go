@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	DIR  = flag.String("dir", "", "directory to scan")
-	EXTS = flag.String("exts", "", "extensions")
+	DIR  = flag.String("dir", "", "Directory to scan")
+	EXTS = flag.String("exts", "", "Comma-separated list of extensions used to filter paths.")
 )
 
 type Filter struct {
