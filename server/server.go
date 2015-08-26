@@ -35,6 +35,10 @@ type View interface {
 
 	// Returns a mapping from url to ViewHandle that handles that URL.
 	GetHandlers() map[string]ViewHandle
+
+	// Returns a map from name to url. For each an entry will be created in
+	// navigation pane. If the map is empty, no entries will be added.
+	GetMenu() (string, map[string]string)
 }
 
 // Implementation of ViewHandle that is using a function.
@@ -56,10 +60,12 @@ type basePageContext struct {
 	ContentContext interface{}
 	Links          map[string]string
 	IframeLinks    map[string]string
+	ViewsMenu      map[string]map[string]string
 	Errors         []string
 }
 
 type MyHTTPServer struct {
+	views           map[string]View
 	parsedTemplates map[string]map[string]*template.Template
 
 	port int
@@ -98,6 +104,8 @@ func (s *MyHTTPServer) RegisterView(v View) error {
 	if ok {
 		return fmt.Errorf("view with name %s is already registered", v.GetName())
 	}
+
+	s.views[v.GetName()] = v
 
 	// Parse view templates.
 	viewTemplates := map[string]*template.Template{}
@@ -146,7 +154,20 @@ func (s *MyHTTPServer) getBaseContext(r *http.Request) basePageContext {
 		IsMobile:    s.isMobile(r),
 		Links:       s.links,
 		IframeLinks: s.iframeLinks,
+		ViewsMenu:   s.getViewsMenu(),
 	}
+}
+
+func (s *MyHTTPServer) getViewsMenu() map[string]map[string]string {
+	menu := map[string]map[string]string{}
+	for _, v := range s.views {
+		title, vmenu := v.GetMenu()
+		if len(vmenu) != 0 {
+			menu[title] = vmenu
+		}
+	}
+	log.Printf("Menu: %v\n", menu)
+	return menu
 }
 
 func (s *MyHTTPServer) isMobile(r *http.Request) bool {
@@ -163,6 +184,7 @@ func NewMyHTTPServer(port int, templatesPath string, resourcesPath string, links
 		iframeLinks = map[string]string{}
 	}
 	httpServer := &MyHTTPServer{
+		views:           map[string]View{},
 		parsedTemplates: map[string]map[string]*template.Template{},
 
 		port:          port,

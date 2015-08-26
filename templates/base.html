@@ -10,6 +10,7 @@
 	{{end}}
 	<script src="//code.jquery.com/jquery-1.10.2.js" type="text/javascript"></script>
 	<script src="//code.jquery.com/ui/1.11.4/jquery-ui.js" type="text/javascript"></script>
+	{{template "head" .ContentContext}}
 </head>
 <body>
 
@@ -30,6 +31,16 @@
 				{{end}}
 			{{end}}
 		</div>
+	{{range $viewName, $viewUrls := .ViewsMenu}}
+	{{if $viewUrls }}
+	<div class="navbox_title">{{print $viewName}}</div>
+		<div class="navbox_content">
+			{{range $name, $url := $viewUrls }}
+			<div>■ <a href="{{print $url}}">{{print $name}}</a></div>
+			{{end}}
+		</div>
+	{{end}}
+	{{end}}
 	</div>
 	{{template "navpane" .ContentContext}}
 </div>
@@ -54,5 +65,6 @@
 </body>
 </html>
 {{end}}
+{{define "head" }}{{end}}
 {{define "navpane"}}{{end}}
 {{define "section"}}{{end}}

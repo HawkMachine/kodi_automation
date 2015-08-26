@@ -30,6 +30,10 @@ func (wv *WrapView) GetHandlers() map[string]server.ViewHandle {
 	}
 }
 
+func (wv *WrapView) GetMenu() (string, map[string]string) {
+	return "", nil
+}
+
 func (wv *WrapView) wrapHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {
 	name := r.URL.Path[len("/wrap/"):]
 	url, ok := wv.iframeLinks[name]

@@ -53,6 +53,12 @@ func (msv *MoveServerView) GetHandlers() map[string]server.ViewHandle {
 
 }
 
+func (msv *MoveServerView) GetMenu() (string, map[string]string) {
+	return "Move Server", map[string]string{
+		"Move Dashboard": "/",
+	}
+}
+
 func New(server server.HTTPServer, moveServer *moveserver.MoveServer) (server.View, error) {
 	if moveServer == nil {
 		return nil, fmt.Errorf("Move server cannot be null")
