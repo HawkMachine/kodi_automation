@@ -1,12 +1,5 @@
 package kodi
 
-import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-)
-
 type VideoFieldsMovies string
 
 const (
@@ -116,36 +109,50 @@ const (
 type ListFilterFieldsEpisodes string
 
 const (
-	EPISODE_FILTER_FIELD_TITLE            ListFilterFieldsEpisodes = "title"
-	EPISODE_FILTER_FIELD_TVSHOW           ListFilterFieldsEpisodes = "tvshow"
-	EPISODE_FILTER_FIELD_PLOT             ListFilterFieldsEpisodes = "plot"
-	EPISODE_FILTER_FIELD_VOTES            ListFilterFieldsEpisodes = "votes"
-	EPISODE_FILTER_FIELD_RATING           ListFilterFieldsEpisodes = "rating"
-	EPISODE_FILTER_FIELD_TIME             ListFilterFieldsEpisodes = "time"
-	EPISODE_FILTER_FIELD_WRITERS          ListFilterFieldsEpisodes = "writers"
-	EPISODE_FILTER_FIELD_AIRDATE          ListFilterFieldsEpisodes = "airdate"
-	EPISODE_FILTER_FIELD_PLAYCOUNT        ListFilterFieldsEpisodes = "playcount"
-	EPISODE_FILTER_FIELD_LASTPLAYED       ListFilterFieldsEpisodes = "lastplayed"
-	EPISODE_FILTER_FIELD_INPROGRESS       ListFilterFieldsEpisodes = "inprogress"
-	EPISODE_FILTER_FIELD_GENRE            ListFilterFieldsEpisodes = "genre"
-	EPISODE_FILTER_FIELD_YEAR             ListFilterFieldsEpisodes = "year"
-	EPISODE_FILTER_FIELD_DIRECTOR         ListFilterFieldsEpisodes = "director"
-	EPISODE_FILTER_FIELD_ACTOR            ListFilterFieldsEpisodes = "actor"
-	EPISODE_FILTER_FIELD_EPISODE          ListFilterFieldsEpisodes = "episode"
-	EPISODE_FILTER_FIELD_SEASON           ListFilterFieldsEpisodes = "season"
-	EPISODE_FILTER_FIELD_FILENAME         ListFilterFieldsEpisodes = "filename"
-	EPISODE_FILTER_FIELD_PATH             ListFilterFieldsEpisodes = "path"
-	EPISODE_FILTER_FIELD_STUDIO           ListFilterFieldsEpisodes = "studio"
-	EPISODE_FILTER_FIELD_MPAARATING       ListFilterFieldsEpisodes = "mpaarating"
-	EPISODE_FILTER_FIELD_DATEADDED        ListFilterFieldsEpisodes = "dateadded"
-	EPISODE_FILTER_FIELD_VIDEORESOLUTION  ListFilterFieldsEpisodes = "videoresolution"
-	EPISODE_FILTER_FIELD_AUDIOCHANNELS    ListFilterFieldsEpisodes = "audiochannels"
-	EPISODE_FILTER_FIELD_VIDEOCODEC       ListFilterFieldsEpisodes = "videocodec"
-	EPISODE_FILTER_FIELD_AUDIOCODEC       ListFilterFieldsEpisodes = "audiocodec"
-	EPISODE_FILTER_FIELD_AUDIOLANGUAGE    ListFilterFieldsEpisodes = "audiolanguage"
-	EPISODE_FILTER_FIELD_SUBTITLELANGUAGE ListFilterFieldsEpisodes = "subtitlelanguage"
-	EPISODE_FILTER_FIELD_VIDEOASPECT      ListFilterFieldsEpisodes = "videoaspect"
-	EPISODE_FILTER_FIELD_PLAYLIST         ListFilterFieldsEpisodes = "playlist"
+	EPISODE_FILTER_FIELD_TITLE             ListFilterFieldsEpisodes = "title"
+	EPISODE_FILTER_FIELD_TV_SHOW           ListFilterFieldsEpisodes = "tvshow"
+	EPISODE_FILTER_FIELD_PLOT              ListFilterFieldsEpisodes = "plot"
+	EPISODE_FILTER_FIELD_VOTES             ListFilterFieldsEpisodes = "votes"
+	EPISODE_FILTER_FIELD_RATING            ListFilterFieldsEpisodes = "rating"
+	EPISODE_FILTER_FIELD_TIME              ListFilterFieldsEpisodes = "time"
+	EPISODE_FILTER_FIELD_WRITERS           ListFilterFieldsEpisodes = "writers"
+	EPISODE_FILTER_FIELD_AIR_DATE          ListFilterFieldsEpisodes = "airdate"
+	EPISODE_FILTER_FIELD_PLAYCOUNT         ListFilterFieldsEpisodes = "playcount"
+	EPISODE_FILTER_FIELD_LAST_PLAYED       ListFilterFieldsEpisodes = "lastplayed"
+	EPISODE_FILTER_FIELD_IN_PROGRESS       ListFilterFieldsEpisodes = "inprogress"
+	EPISODE_FILTER_FIELD_GENRE             ListFilterFieldsEpisodes = "genre"
+	EPISODE_FILTER_FIELD_YEAR              ListFilterFieldsEpisodes = "year"
+	EPISODE_FILTER_FIELD_DIRECTOR          ListFilterFieldsEpisodes = "director"
+	EPISODE_FILTER_FIELD_ACTOR             ListFilterFieldsEpisodes = "actor"
+	EPISODE_FILTER_FIELD_EPISODE           ListFilterFieldsEpisodes = "episode"
+	EPISODE_FILTER_FIELD_SEASON            ListFilterFieldsEpisodes = "season"
+	EPISODE_FILTER_FIELD_FILENAME          ListFilterFieldsEpisodes = "filename"
+	EPISODE_FILTER_FIELD_PATH              ListFilterFieldsEpisodes = "path"
+	EPISODE_FILTER_FIELD_STUDIO            ListFilterFieldsEpisodes = "studio"
+	EPISODE_FILTER_FIELD_MPAA_RATING       ListFilterFieldsEpisodes = "mpaarating"
+	EPISODE_FILTER_FIELD_DATE_ADDED        ListFilterFieldsEpisodes = "dateadded"
+	EPISODE_FILTER_FIELD_VIDEO_RESOLUTION  ListFilterFieldsEpisodes = "videoresolution"
+	EPISODE_FILTER_FIELD_AUDIO_CHANNELS    ListFilterFieldsEpisodes = "audiochannels"
+	EPISODE_FILTER_FIELD_VIDEO_CODEC       ListFilterFieldsEpisodes = "videocodec"
+	EPISODE_FILTER_FIELD_AUDIO_CODEC       ListFilterFieldsEpisodes = "audiocodec"
+	EPISODE_FILTER_FIELD_AUDIO_LANGUAGE    ListFilterFieldsEpisodes = "audiolanguage"
+	EPISODE_FILTER_FIELD_SUBTITLE_LANGUAGE ListFilterFieldsEpisodes = "subtitlelanguage"
+	EPISODE_FILTER_FIELD_VIDEO_ASPECT      ListFilterFieldsEpisodes = "videoaspect"
+	EPISODE_FILTER_FIELD_PLAYLIST          ListFilterFieldsEpisodes = "playlist"
+)
+
+type VideoFieldsSeason string
+
+const (
+	SEASON_FIELD_SEASON           VideoFieldsSeason = "season"
+	SEASON_FIELD_SHOW_TITLE       VideoFieldsSeason = "showtitle"
+	SEASON_FIELD_PLAY_COUNT       VideoFieldsSeason = "playcount"
+	SEASON_FIELD_EPISODE          VideoFieldsSeason = "episode"
+	SEASON_FIELD_FAN_ART          VideoFieldsSeason = "fanart"
+	SEASON_FIELD_THUMBNAIL        VideoFieldsSeason = "thumbnail"
+	SEASON_FIELD_TV_SHOW_ID       VideoFieldsSeason = "tvshowid"
+	SEASON_FIELD_WATCHED_EPISODES VideoFieldsSeason = "watchedepisodes"
+	SEASON_FIELD_ART              VideoFieldsSeason = "art"
 )
 
 type VideoFieldsTvShow string
@@ -181,25 +188,25 @@ const (
 type ListFilterFieldsTVShows string
 
 const (
-	TV_SHOW_FILTER_FIELD_TITLE       ListFilterFieldsTVShows = "title"
-	TV_SHOW_FILTER_FIELD_PLOT        ListFilterFieldsTVShows = "plot"
-	TV_SHOW_FILTER_FIELD_STATUS      ListFilterFieldsTVShows = "status"
-	TV_SHOW_FILTER_FIELD_VOTES       ListFilterFieldsTVShows = "votes"
-	TV_SHOW_FILTER_FIELD_RATING      ListFilterFieldsTVShows = "rating"
-	TV_SHOW_FILTER_FIELD_YEAR        ListFilterFieldsTVShows = "year"
-	TV_SHOW_FILTER_FIELD_GENRE       ListFilterFieldsTVShows = "genre"
-	TV_SHOW_FILTER_FIELD_DIRECTOR    ListFilterFieldsTVShows = "director"
-	TV_SHOW_FILTER_FIELD_ACTOR       ListFilterFieldsTVShows = "actor"
-	TV_SHOW_FILTER_FIELD_NUMEPISODES ListFilterFieldsTVShows = "numepisodes"
-	TV_SHOW_FILTER_FIELD_NUMWATCHED  ListFilterFieldsTVShows = "numwatched"
-	TV_SHOW_FILTER_FIELD_PLAYCOUNT   ListFilterFieldsTVShows = "playcount"
-	TV_SHOW_FILTER_FIELD_PATH        ListFilterFieldsTVShows = "path"
-	TV_SHOW_FILTER_FIELD_STUDIO      ListFilterFieldsTVShows = "studio"
-	TV_SHOW_FILTER_FIELD_MPAARATING  ListFilterFieldsTVShows = "mpaarating"
-	TV_SHOW_FILTER_FIELD_DATEADDED   ListFilterFieldsTVShows = "dateadded"
-	TV_SHOW_FILTER_FIELD_LASTPLAYED  ListFilterFieldsTVShows = "lastplayed"
-	TV_SHOW_FILTER_FIELD_INPROGRESS  ListFilterFieldsTVShows = "inprogress"
-	TV_SHOW_FILTER_FIELD_PLAYLIST    ListFilterFieldsTVShows = "playlist"
+	TV_SHOW_FILTER_FIELD_TITLE        ListFilterFieldsTVShows = "title"
+	TV_SHOW_FILTER_FIELD_PLOT         ListFilterFieldsTVShows = "plot"
+	TV_SHOW_FILTER_FIELD_STATUS       ListFilterFieldsTVShows = "status"
+	TV_SHOW_FILTER_FIELD_VOTES        ListFilterFieldsTVShows = "votes"
+	TV_SHOW_FILTER_FIELD_RATING       ListFilterFieldsTVShows = "rating"
+	TV_SHOW_FILTER_FIELD_YEAR         ListFilterFieldsTVShows = "year"
+	TV_SHOW_FILTER_FIELD_GENRE        ListFilterFieldsTVShows = "genre"
+	TV_SHOW_FILTER_FIELD_DIRECTOR     ListFilterFieldsTVShows = "director"
+	TV_SHOW_FILTER_FIELD_ACTOR        ListFilterFieldsTVShows = "actor"
+	TV_SHOW_FILTER_FIELD_NUM_EPISODES ListFilterFieldsTVShows = "numepisodes"
+	TV_SHOW_FILTER_FIELD_NUM_WATCHED  ListFilterFieldsTVShows = "numwatched"
+	TV_SHOW_FILTER_FIELD_PLAY_COUNT   ListFilterFieldsTVShows = "playcount"
+	TV_SHOW_FILTER_FIELD_PATH         ListFilterFieldsTVShows = "path"
+	TV_SHOW_FILTER_FIELD_STUDIO       ListFilterFieldsTVShows = "studio"
+	TV_SHOW_FILTER_FIELD_MPAA_RATING  ListFilterFieldsTVShows = "mpaarating"
+	TV_SHOW_FILTER_FIELD_DATE_ADDED   ListFilterFieldsTVShows = "dateadded"
+	TV_SHOW_FILTER_FIELD_LAST_PLAYED  ListFilterFieldsTVShows = "lastplayed"
+	TV_SHOW_FILTER_FIELD_IN_PROGRESS  ListFilterFieldsTVShows = "inprogress"
+	TV_SHOW_FILTER_FIELD_PLAYLIST     ListFilterFieldsTVShows = "playlist"
 )
 
 type VideoCastElement struct {
@@ -314,20 +321,7 @@ func (vl *VideoLibrary) doRPC(rpcName string, params interface{}, response inter
 		Id:      "1",
 		Params:  params,
 	}
-	resp, err := vl.k.postRequest(req)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("RESP : %v\n", resp)
-	bts, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("BTS  : %v\n", string(bts))
-
-	dec := json.NewDecoder(bytes.NewBuffer(bts))
-	err = dec.Decode(response)
-	return err
+	return vl.k.doRPC(req, response)
 }
 
 // VideoLibrary.GetMovies
@@ -518,20 +512,6 @@ func (vl *VideoLibrary) GetTVShowDetails(params *GetTVShowDetailsParams) (*GetTV
 }
 
 // VideoLibrary.GetSeasons
-
-type VideoFieldsSeason string
-
-const (
-	SEASON_FIELD_SEASON           VideoFieldsSeason = "season"
-	SEASON_FIELD_SHOW_TITLE       VideoFieldsSeason = "showtitle"
-	SEASON_FIELD_PLAY_COUNT       VideoFieldsSeason = "playcount"
-	SEASON_FIELD_EPISODE          VideoFieldsSeason = "episode"
-	SEASON_FIELD_FAN_ART          VideoFieldsSeason = "fanart"
-	SEASON_FIELD_THUMBNAIL        VideoFieldsSeason = "thumbnail"
-	SEASON_FIELD_TV_SHOW_ID       VideoFieldsSeason = "tvshowid"
-	SEASON_FIELD_WATCHED_EPISODES VideoFieldsSeason = "watchedepisodes"
-	SEASON_FIELD_ART              VideoFieldsSeason = "art"
-)
 
 type GetSeasonsParams struct {
 	TVShowId   LibraryId           `json:"tvshowid"`

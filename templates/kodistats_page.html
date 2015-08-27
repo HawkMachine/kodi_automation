@@ -1,0 +1,68 @@
+{{define "head"}}
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+{{end}}
+
+{{define "section"}}
+<script type="text/javascript">
+      // Load the Visualization API and the piechart package.
+      google.load('visualization', '1.0', {'packages':['corechart']});
+
+      // Set a callback to run when the Google Visualization API is loaded.
+      google.setOnLoadCallback(loadDataAndDrawChart);
+
+
+			function loadDataAndDrawChart() {
+				data = $.ajax({
+					'url': '/kodistats/_getdata/watched_episodes',
+					'dataType': 'json',
+					'success': function(result){
+						console.log("AJAX SUCCESS", result)
+						var episodes = result.result.episodes;
+						drawWatchedEpiosdesByDateChart(result.result.episodes);
+					},
+				});
+			}
+
+			function drawWatchedEpiosdesByDateChart(episodes) {
+				console.log(episodes);
+				var episodesByDate = {};
+				for (var i = 0; i < episodes.length; i++) {
+					var ep = episodes[i];
+					var ds = ep.lastplayed.substring(0, 10);
+					if (ds in episodesByDate) {
+						episodesByDate[ds].push(ep);
+					} else {
+						episodesByDate[ds] = [ep];
+					}
+				}
+				console.log(episodesByDate);
+				var dates = [];
+				for (ds in episodesByDate) {
+					dates.push(ds);
+				}
+				dates = dates.sort();
+
+				var data = new google.visualization.DataTable();
+				data.addColumn('date', 'Date');
+				data.addColumn('number', 'Watched Episodes');
+				var rows = [];
+				for (var i = 0; i < dates.length; i++) {
+					var date = dates[i];
+					rows.push([new Date(date), episodesByDate[date].length]);
+				}
+				console.log(rows)
+
+				data.addRows(rows);
+
+				var options = {
+					title: 'Watched episodes',
+					legend: { position: 'bottom' }
+				};
+				var chart = new google.visualization.LineChart(
+						document.getElementById('watched_episodes_chart'));
+				chart.draw(data, options);
+			}
+</script>
+
+<div id="watched_episodes_chart" style="width: 900px; height: 500px"></div>
+{{end}}

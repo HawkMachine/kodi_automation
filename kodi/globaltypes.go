@@ -80,7 +80,7 @@ type LibraryId int
 
 type ListSort struct {
 	Order         string `json:"order"`
-	Ignorearticle string `json:"ignorearticle"`
+	Ignorearticle bool   `json:"ignorearticle"`
 	Method        string `json:"method"`
 }
 
@@ -91,11 +91,14 @@ type Filter struct {
 }
 
 type ListLimits struct {
-	Start int `json:"start"`
-	End   int `json:"end"`
+	Start int `json:"start,omitempty"`
+	End   int `json:"end,omitempty"`
 }
 
 type ListLimitsReturned struct {
+	Total int `json:"total"`
+	Start int `json:"start,omitempty"`
+	End   int `json:"end,omitempty"`
 }
 
 type ItemDetailsBase struct {

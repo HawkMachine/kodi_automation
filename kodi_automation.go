@@ -11,6 +11,7 @@ import (
 
 	"github.com/HawkMachine/kodi_automation/moveserver"
 	"github.com/HawkMachine/kodi_automation/server"
+	"github.com/HawkMachine/kodi_automation/views/kodistatsview"
 	"github.com/HawkMachine/kodi_automation/views/moveserverview"
 	"github.com/HawkMachine/kodi_automation/views/wrapview"
 )
@@ -28,6 +29,10 @@ var (
 
 	templatesPath = flag.String("templates_path", "templates", "Path to server templates.")
 	resourcesPath = flag.String("resources_path", "resources", "Path to server resources.")
+
+	kodiAddress  = flag.String("kodi_address", "", "Address of kodi instance")
+	kodiUsername = flag.String("kodi_username", "", "Username of kodi user to use")
+	kodiPassword = flag.String("kodi_password", "", "Password of kodi user to use")
 )
 
 // getLocalIP returns the non loopback local IP of the host.
@@ -141,22 +146,32 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	views := []server.View{}
+
 	moveServerView, err := moveserverview.New(s, moveServer)
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = s.RegisterView(moveServerView)
-	if err != nil {
-		log.Fatal(err)
-	}
+	views = append(views, moveServerView)
 
 	// Wrap view.
-	wrapView := wrapview.New(iframeLinks)
-	err = s.RegisterView(wrapView)
-	if err != nil {
-		log.Fatal(err)
+	views = append(views, wrapview.New(iframeLinks))
+
+	// Kodi stats view.
+	if *kodiAddress != "" && *kodiUsername != "" && *kodiPassword != "" {
+		views = append(views, kodistatsview.New(*kodiAddress, *kodiUsername, *kodiPassword))
+	} else {
+		log.Println("Kodi address, username or password missing. Skipping kodi stats view.")
 	}
 
 	// Run server.
+	for _, v := range views {
+		err = s.RegisterView(v)
+		if err != nil {
+			log.Fatal("Error occured while registering view %q: %v\n", v.GetName(), err)
+		}
+	}
+
 	s.Run()
 }

@@ -3,8 +3,10 @@ package kodi
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+	"io/ioutil"
 	"net/http"
+
+	"github.com/golang/glog"
 )
 
 type request struct {
@@ -50,14 +52,38 @@ type Kodi struct {
 
 func (k *Kodi) postRequest(r interface{}) (*http.Response, error) {
 	bts, err := json.Marshal(r)
-	fmt.Printf("POST : %v\n", string(bts))
 	if err != nil {
 		return nil, err
 	}
+	glog.V(3).Infof("KODI POST REQUEST  : %v\n", string(bts))
+
 	cli := &http.Client{}
 	req, err := http.NewRequest("POST", k.address, bytes.NewBuffer(bts))
+	if err != nil {
+		return nil, err
+	}
 	req.SetBasicAuth(k.username, k.password)
-	return cli.Do(req)
+
+	response, err := cli.Do(req)
+	glog.V(3).Infof("KODI POST RESPONSE : %v\n", response)
+
+	return response, err
+}
+
+func (k *Kodi) doRPC(request interface{}, response interface{}) error {
+	resp, err := k.postRequest(request)
+	if err != nil {
+		return err
+	}
+	bts, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	glog.V(2).Infof("KODI JSON RESPONSE : %v\n", string(bts))
+
+	dec := json.NewDecoder(bytes.NewBuffer(bts))
+	err = dec.Decode(response)
+	return err
 }
 
 func New(address, username, password string) *Kodi {
