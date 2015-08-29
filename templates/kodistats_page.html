@@ -20,6 +20,9 @@
 						var episodes = result.result.episodes;
 						drawWatchedEpiosdesByDateChart(result.result.episodes);
 					},
+				})
+				.fail(function(jqXHR, text_status){
+					$("#watched_episodes_chart").text("Request failed: " + text_status);
 				});
 			}
 
@@ -64,5 +67,7 @@
 			}
 </script>
 
-<div id="watched_episodes_chart" style="width: 900px; height: 500px"></div>
+<div id="watched_episodes_chart" style="width: 900px; height: 500px">
+	<img class="centered" src="/resources/loading.gif"/>
+</div>
 {{end}}
