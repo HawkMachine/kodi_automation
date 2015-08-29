@@ -11,7 +11,7 @@ import (
 
 	"github.com/HawkMachine/kodi_automation/moveserver"
 	"github.com/HawkMachine/kodi_automation/server"
-	"github.com/HawkMachine/kodi_automation/views/kodistatsview"
+	"github.com/HawkMachine/kodi_automation/views/kodiview"
 	"github.com/HawkMachine/kodi_automation/views/moveserverview"
 	"github.com/HawkMachine/kodi_automation/views/wrapview"
 )
@@ -160,7 +160,7 @@ func main() {
 
 	// Kodi stats view.
 	if *kodiAddress != "" && *kodiUsername != "" && *kodiPassword != "" {
-		views = append(views, kodistatsview.New(*kodiAddress, *kodiUsername, *kodiPassword))
+		views = append(views, kodiview.New(*kodiAddress, *kodiUsername, *kodiPassword))
 	} else {
 		log.Println("Kodi address, username or password missing. Skipping kodi stats view.")
 	}

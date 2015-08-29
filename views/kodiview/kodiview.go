@@ -1,4 +1,4 @@
-package kodistatsview
+package kodiview
 
 import (
 	"encoding/json"
@@ -9,15 +9,15 @@ import (
 	"github.com/HawkMachine/kodi_automation/server"
 )
 
-type KodiStatsView struct {
+type KodiView struct {
 	k *kodi.Kodi
 }
 
-func (ksv *KodiStatsView) GetName() string {
-	return "kodistatsview"
+func (ksv *KodiView) GetName() string {
+	return "kodiview"
 }
 
-func (ksv *KodiStatsView) GetTemplates() map[string][]string {
+func (ksv *KodiView) GetTemplates() map[string][]string {
 	return map[string][]string{
 		"kodistats": []string{
 			"base.html",
@@ -26,27 +26,27 @@ func (ksv *KodiStatsView) GetTemplates() map[string][]string {
 	}
 }
 
-func (ksv *KodiStatsView) GetHandlers() map[string]server.ViewHandle {
+func (ksv *KodiView) GetHandlers() map[string]server.ViewHandle {
 	return map[string]server.ViewHandle{
-		"/kodistats":           server.NewViewHandle(ksv.kodiStatsPageHandler),
-		"/kodistats/_getdata/": server.NewViewHandle(ksv.kodiStatsGetDataHandler),
+		"/kodi/stats":           server.NewViewHandle(ksv.kodiStatsPageHandler),
+		"/kodi/stats/_getdata/": server.NewViewHandle(ksv.kodiStatsGetDataHandler),
 	}
 }
 
-func (ksv *KodiStatsView) GetMenu() (string, map[string]string) {
-	return "Kodi Stats", map[string]string{
-		"Dashboard": "/kodistats",
+func (ksv *KodiView) GetMenu() (string, map[string]string) {
+	return "Kodi", map[string]string{
+		"Stats": "/kodi/stats",
 	}
 }
 
-func (ksv *KodiStatsView) kodiStatsPageHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {
+func (ksv *KodiView) kodiStatsPageHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {
 	context := struct {
 	}{}
 
 	s.RenderTemplate(w, r, ksv.GetName(), "kodistats", context)
 }
 
-func (ksv *KodiStatsView) kodiStatsGetDataHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {
+func (ksv *KodiView) kodiStatsGetDataHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {
 	now := time.Now()
 	startDate := now.AddDate(0, -1, 0)
 	result, err := ksv.k.VideoLibrary.GetEpisodes(&kodi.GetEpisodesParams{
@@ -76,6 +76,6 @@ func (ksv *KodiStatsView) kodiStatsGetDataHandler(w http.ResponseWriter, r *http
 	w.Write(jsonData)
 }
 
-func New(address, username, password string) *KodiStatsView {
-	return &KodiStatsView{k: kodi.New(address+"/jsonrpc", username, password)}
+func New(address, username, password string) *KodiView {
+	return &KodiView{k: kodi.New(address+"/jsonrpc", username, password)}
 }
