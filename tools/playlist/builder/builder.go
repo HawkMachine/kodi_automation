@@ -19,7 +19,7 @@ var (
 	size  = flag.Int("s", 5, "Number of episodes.")
 	shows = flag.String("shows", "", "Comma-separated list of tv shows names.")
 
-	dry_run = flag.Bool("dry_run", true, "Dry run mode - only print the playlist")
+	dryRun = flag.Bool("dry_run", true, "Dry run mode - only print the playlist")
 )
 
 func main() {
@@ -37,5 +37,28 @@ func main() {
 	}
 	for _, ep := range episodes {
 		fmt.Printf("%20s : S%2dE%2d : %q\n", ep.ShowTitle, ep.Season, ep.Episode, ep.Title)
+	}
+
+	if *dryRun {
+		return
+	}
+
+	fmt.Println("==== Submitting to kodi ===")
+
+	for _, ep := range episodes {
+		resp, err := k.Playlist.Add(&kodi.PlaylistAddParams{
+			PlaylistId: kodi.PLAYLIST_VIDEO_ID,
+			Item: kodi.PlaylistItem{
+				EpisodeId: &ep.EpisodeId,
+			},
+		})
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		if resp.Error != nil {
+			log.Fatal(resp.Error)
+		}
+		fmt.Printf("%20s : S%2dE%2d : %q : %s\n", ep.ShowTitle, ep.Season, ep.Episode, ep.Title, *resp.Result)
 	}
 }
