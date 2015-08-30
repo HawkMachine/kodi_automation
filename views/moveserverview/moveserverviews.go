@@ -73,6 +73,7 @@ func (msv *MoveServerView) movePostHandler(w http.ResponseWriter, r *http.Reques
 	err := r.ParseForm()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	form := r.Form
 	messageType := form.Get("type")
@@ -86,6 +87,7 @@ func (msv *MoveServerView) movePostHandler(w http.ResponseWriter, r *http.Reques
 	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	http.Redirect(w, r, "/", http.StatusFound)
 }

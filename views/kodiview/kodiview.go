@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/HawkMachine/kodi_automation/kodi"
 	"github.com/HawkMachine/kodi_automation/server"
+	"github.com/HawkMachine/kodi_go_api/v6/kodi"
 )
 
 type KodiView struct {
@@ -49,21 +49,16 @@ func (ksv *KodiView) kodiStatsPageHandler(w http.ResponseWriter, r *http.Request
 func (ksv *KodiView) kodiStatsGetDataHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {
 	now := time.Now()
 	startDate := now.AddDate(0, -1, 0)
-	result, err := ksv.k.VideoLibrary.GetEpisodes(&kodi.GetEpisodesParams{
+	result, err := ksv.k.VideoLibrary.GetEpisodes(&kodi.VideoLibraryGetEpisodesParams{
 		Properties: []kodi.VideoFieldsEpisode{
 			kodi.EPISODE_FIELD_SHOW_TITLE,
 			kodi.EPISODE_FIELD_TITLE,
 			kodi.EPISODE_FIELD_LAST_PLAYED,
 		},
-		Filter: &kodi.GetEpisodesFilter{
-			ListFilterEpisodes: &kodi.ListFilterEpisodes{
-				ListFilterRuleEpisodes: &kodi.ListFilterRuleEpisodes{
-					Field:    kodi.EPISODE_FILTER_FIELD_LAST_PLAYED,
-					Operator: kodi.OPERATOR_AFTER,
-					Value:    startDate.Format("2006-01-02"),
-				},
-			},
-		},
+		Filter: kodi.VideoLibraryCreateEpisodesFilterByField(
+			kodi.EPISODE_FILTER_FIELD_LAST_PLAYED,
+			kodi.OPERATOR_AFTER,
+			startDate.Format("2006-01-02")),
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
