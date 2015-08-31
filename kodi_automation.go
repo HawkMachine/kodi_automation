@@ -33,6 +33,9 @@ var (
 	kodiAddress  = flag.String("kodi_address", "", "Address of kodi instance")
 	kodiUsername = flag.String("kodi_username", "", "Username of kodi user to use")
 	kodiPassword = flag.String("kodi_password", "", "Password of kodi user to use")
+
+	basicAuthUsername = flag.String("auth_username", "admin", "Basic auth username")
+	basicAuthPassword = flag.String("auth_password", "4dm1n", "Basic auth password")
 )
 
 // getLocalIP returns the non loopback local IP of the host.
@@ -135,6 +138,8 @@ func main() {
 	// Server.
 	s := server.NewMyHTTPServer(
 		*port,
+		*basicAuthUsername,
+		*basicAuthPassword,
 		*templatesPath,
 		*resourcesPath,
 		links,

@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+
+	"github.com/HawkMachine/kodi_automation/server/auth"
 )
 
 // Interface used by ViewHandler
@@ -74,6 +76,9 @@ type MyHTTPServer struct {
 	iframeLinks map[string]string
 
 	templatesPath string
+
+	basicAuthUsername string
+	basicAuthPassword string
 }
 
 func (s *MyHTTPServer) RenderTemplate(w http.ResponseWriter, r *http.Request, viewName, templateName string, context interface{}) {
@@ -89,12 +94,27 @@ func (s *MyHTTPServer) RenderTemplate(w http.ResponseWriter, r *http.Request, vi
 	}
 }
 
+func (s *MyHTTPServer) BasicAuthAuthenticate(username, password string) (bool, error) {
+	log.Printf("AUTH: %s : %s\n", username, password)
+	if s.basicAuthPassword == "" {
+		return true, nil
+	}
+	return s.basicAuthUsername == username && s.basicAuthPassword == password, nil
+}
+
+func logHandleWrap(f func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("REQ : %s : %#v\n", r.RemoteAddr, r)
+		f(w, r)
+	}
+}
+
 // makeHTTPHandler returns a function that can be used directly to register a
 // handler for a url with http.HandleFunc
-func makeHTTPHandleFunc(s HTTPServer, h ViewHandle) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
+func makeHTTPHandleFunc(s *MyHTTPServer, h ViewHandle) func(http.ResponseWriter, *http.Request) {
+	return logHandleWrap(auth.BasicAuthWrap(s, func(w http.ResponseWriter, r *http.Request) {
 		h.ServeHTTP(w, r, s)
-	}
+	}))
 }
 
 // RegisterView registers the given View on the server.
@@ -176,7 +196,10 @@ func (s *MyHTTPServer) isMobile(r *http.Request) bool {
 }
 
 // New creates new instance of MyHTTPServer.
-func NewMyHTTPServer(port int, templatesPath string, resourcesPath string, links map[string]string, iframeLinks map[string]string) *MyHTTPServer {
+func NewMyHTTPServer(port int, basicAuthUsername string, basicAuthPassword string,
+	templatesPath string, resourcesPath string,
+	links map[string]string, iframeLinks map[string]string) *MyHTTPServer {
+
 	if links == nil {
 		links = map[string]string{}
 	}
@@ -191,6 +214,9 @@ func NewMyHTTPServer(port int, templatesPath string, resourcesPath string, links
 		links:         links,
 		iframeLinks:   iframeLinks,
 		templatesPath: templatesPath,
+
+		basicAuthUsername: basicAuthUsername,
+		basicAuthPassword: basicAuthPassword,
 	}
 	return httpServer
 }
