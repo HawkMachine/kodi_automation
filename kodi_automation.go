@@ -21,7 +21,7 @@ var (
 	maxMvCommands     = flag.Int("max_mv_commands", 5, "max mv commands running in parallel")
 	port              = flag.Int("port", 8080, "port to use")
 	sourceDir         = flag.String("source_dir", "", "directory to scan")
-	moviesTarget      = flag.String("movies_dir", "", "where to move movies")
+	moviesTarget      = flag.String("movies_dir", "", "comma-separated list of directories where to move movies")
 	seriesTarget      = flag.String("series_dir", "", "where to move series")
 	customLinks       = flag.String("links", "", "comma-delimited list of <link name>:<url>")
 	customIframeLinks = flag.String("iframe_links", "", "comma-delimited list of <link name>:<url>")
@@ -89,8 +89,25 @@ func main() {
 	if *sourceDir, err = filepath.Abs(*sourceDir); err != nil {
 		log.Fatal(err)
 	}
-	if *moviesTarget, err = filepath.Abs(*moviesTarget); err != nil {
-		log.Fatal(err)
+	moviesTargets := []string{}
+	for _, movieTargetPath := range strings.Split(*moviesTarget, ",") {
+		if movieTargetPath, err = filepath.Abs(movieTargetPath); err != nil {
+			log.Fatal(err)
+		}
+		moviesTargets = append(moviesTargets, movieTargetPath)
+	}
+	if len(moviesTargets) == 0 {
+		log.Fatal(fmt.Errorf("Movies targets resolves to empty list"))
+	}
+	seriesTargets := []string{}
+	for _, seriesTargetPath := range strings.Split(*seriesTarget, ",") {
+		if seriesTargetPath, err = filepath.Abs(seriesTargetPath); err != nil {
+			log.Fatal(err)
+		}
+		seriesTargets = append(seriesTargets, seriesTargetPath)
+	}
+	if len(seriesTargets) == 0 {
+		log.Fatal(fmt.Errorf("Series targets resolves to empty list"))
 	}
 	if *seriesTarget, err = filepath.Abs(*seriesTarget); err != nil {
 		log.Fatal(err)
@@ -102,12 +119,12 @@ func main() {
 		*mvBufferSize = 5
 	}
 	log.Printf("PORT             = %d", *port)
-	log.Printf("SOURCE_DIR       = %s", *sourceDir)
-	log.Printf("MOVIES_TARGET    = %s", *moviesTarget)
-	log.Printf("SERIES_TARGET    = %s", *seriesTarget)
-	log.Printf("MAX_MV_COMMANDS  = %d", *maxMvCommands)
-	log.Printf("MV_BUFFER_SIZE   = %d", *mvBufferSize)
-	log.Printf("WAIT_FOR_IP      = %d", *waitForIP)
+	log.Printf("SOURCE DIR       = %s", *sourceDir)
+	log.Printf("MOVIES TARGETS   = %v", moviesTargets)
+	log.Printf("SERIES TARGETS   = %s", seriesTargets)
+	log.Printf("MAX MV COMMANDS  = %d", *maxMvCommands)
+	log.Printf("MV BUFFER SIZE   = %d", *mvBufferSize)
+	log.Printf("WAIT FOR IP      = %d", *waitForIP)
 	log.Printf("LINKS            = %v", *customLinks)
 	log.Printf("IFRAME LINKS     = %v", *customIframeLinks)
 
@@ -147,7 +164,7 @@ func main() {
 
 	// Initialize move server view.
 	moveServer, err := moveserver.New(
-		*sourceDir, *moviesTarget, *seriesTarget, *maxMvCommands, *mvBufferSize)
+		*sourceDir, moviesTargets, seriesTargets, *maxMvCommands, *mvBufferSize)
 	if err != nil {
 		log.Fatal(err)
 	}

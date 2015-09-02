@@ -116,13 +116,7 @@ func (msv *MoveServerView) pathInfoPageHandler(w http.ResponseWriter, r *http.Re
 		pathInfoHistoryList = append(pathInfoHistoryList, pi)
 	}
 
-	// ---- prepare target listing
-	seriesTargetListing := msv.moveServer.GetSeriesTargetListing()
-	seriesTarget := msv.moveServer.GetSeriesTarget()
-	seriesTargets := []string{}
-	for _, sTarget := range seriesTargetListing {
-		seriesTargets = append(seriesTargets, sTarget[len(seriesTarget)+1:])
-	}
+	moveTargets := msv.moveServer.GetMoveTargets()
 
 	mvBuffSize, mvBuffElems := msv.moveServer.GetMvBuffSizeAndElems()
 
@@ -132,7 +126,7 @@ func (msv *MoveServerView) pathInfoPageHandler(w http.ResponseWriter, r *http.Re
 	context := struct {
 		PathInfo        []moveserver.PathInfo
 		PathInfoHistory []moveserver.PathInfo
-		SeriesTargets   []string
+		MoveTargets     []string
 		Errors          []error
 		CacheResfreshed string
 		MvBufferSize    int
@@ -141,7 +135,7 @@ func (msv *MoveServerView) pathInfoPageHandler(w http.ResponseWriter, r *http.Re
 	}{
 		PathInfo:        pathInfoList,
 		PathInfoHistory: pathInfoHistoryList,
-		SeriesTargets:   seriesTargets,
+		MoveTargets:     moveTargets,
 		CacheResfreshed: formattedCacheRefreshed,
 		MvBufferSize:    mvBuffSize,
 		MvBufferElems:   mvBuffElems,

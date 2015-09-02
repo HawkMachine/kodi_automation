@@ -7,13 +7,16 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/HawkMachine/kodi_automation/transmission"
+	"github.com/HawkMachine/kodi_automation/utils/collections"
 )
 
+// Returns a list of paths for all files and firectories in the source directory.
 func directoryListing(dirname string, levels int, dirsOnly bool) ([]string, error) {
 	res := []string{}
 	err := filepath.Walk(dirname, func(path string, info os.FileInfo, err error) error {
@@ -101,15 +104,30 @@ func diskStatsUpdater(s *MoveServer, d time.Duration) {
 
 func updateCache(s *MoveServer) {
 	log.Printf("Updating cached info.")
-	paths, err := directoryListing(s.sourceDir, 1, false)
-	sl, slErr := getSeriesTargetListing(s.seriesTarget)
-	tis, _ := s.transmissionCli.GetTorrents(s.sourceDir)
 
-	if err != nil || slErr != nil {
-		log.Printf(fmt.Sprintf("Update cached info errors: %v; %v", err, slErr))
-	} else {
-		s.setCachedInfo(paths, tis, sl)
+	paths, err := directoryListing(s.sourceDir, 1, false)
+	if err != nil {
+		log.Printf("Listing source target error: %v\n", err)
+		return
 	}
+
+	var seriesListing []string
+	for seriesTarget := range s.seriesTargets {
+		sl, err := getSeriesTargetListing(seriesTarget)
+		if err != nil {
+			log.Printf("Listing series target error: %v\n", err)
+			return
+		}
+		seriesListing = append(seriesListing, sl...)
+	}
+
+	tis, err := s.transmissionCli.GetTorrents(s.sourceDir)
+	if err != nil {
+		log.Printf("Getting torrents info error: %v\n", err)
+		return
+	}
+
+	s.setCachedInfo(paths, tis, seriesListing)
 }
 
 func cacheUpdater(s *MoveServer, d time.Duration) {
@@ -162,11 +180,14 @@ type MoveServer struct {
 	sourceDir string
 
 	// Targets for movies
-	moviesTarget string
+	moviesTargets map[string]bool
 
 	// Target for series and directory listing.
-	seriesTarget        string
-	seriesTargetListing []string
+	seriesTargets map[string]bool
+
+	// Move targets
+	moveTargets        map[string]bool
+	moveTargets_sorted []string
 
 	// old path info kept for history - sorted by when things were moved
 	pathInfoHistory []PathInfo
@@ -185,12 +206,12 @@ type MoveServer struct {
 	lock sync.Mutex
 }
 
-func New(sourceDir string, moviesTarget string, seriesTarget string, maxMvComands int, mvBufferSize int) (*MoveServer, error) {
+func New(sourceDir string, moviesTarget []string, seriesTargets []string, maxMvComands int, mvBufferSize int) (*MoveServer, error) {
 	s := &MoveServer{
 		transmissionCli: transmission.New("", 0, "", ""),
 		sourceDir:       sourceDir,
-		moviesTarget:    moviesTarget,
-		seriesTarget:    seriesTarget,
+		moviesTargets:   collections.NewStringsSet(moviesTarget),
+		seriesTargets:   collections.NewStringsSet(seriesTargets),
 		pathInfoHistory: []PathInfo{},
 		pathInfo:        map[string]PathInfo{},
 		refreshDuration: 5 * time.Minute,
@@ -206,20 +227,6 @@ func New(sourceDir string, moviesTarget string, seriesTarget string, maxMvComand
 	go diskStatsUpdater(s, 5*time.Minute)
 
 	return s, nil
-}
-
-func (s *MoveServer) GetSeriesTarget() string {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	return s.seriesTarget
-}
-
-func (s *MoveServer) GetMoviesTarget() string {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	return s.moviesTarget
 }
 
 func (s *MoveServer) GetPathInfo() map[string]PathInfo {
@@ -243,11 +250,11 @@ func (s *MoveServer) GetCacheRefreshed() time.Time {
 	return s.cacheRefreshed
 }
 
-func (s *MoveServer) GetSeriesTargetListing() []string {
+func (s *MoveServer) GetMoveTargets() []string {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	return s.seriesTargetListing
+	return s.moveTargets_sorted
 }
 
 func (s *MoveServer) GetPathInfoAndPathInfoHistory() (map[string]PathInfo, []PathInfo) {
@@ -271,42 +278,17 @@ func (s *MoveServer) GetDiskStats() []DiskStats {
 	return s.diskStats
 }
 
-func (s *MoveServer) getTargetForSeriesMove(path, to string) (string, error) {
-	if filepath.IsAbs(to) {
-		return "", fmt.Errorf("Target path is an absolute path, expected relative: %s", to)
-	}
-	target, err := filepath.Abs(filepath.Join(s.seriesTarget, to, filepath.Base(path)))
-	if err != nil {
-		return "", err
-	}
-	if target[:len(s.seriesTarget)] != s.seriesTarget {
-		return "", fmt.Errorf("Tried to move path outside series dir, to %s", target)
-	}
-	return target, nil
-}
-
-func (s *MoveServer) getTargetForMovieMove(path string) (string, error) {
-	target, err := filepath.Abs(filepath.Join(s.moviesTarget, filepath.Base(path)))
-	if err != nil {
-		return "", err
-	}
-	if filepath.Dir(target) != s.moviesTarget {
-		return "", fmt.Errorf("Tried to move outside movies dir: %s", target)
-	}
-	return target, nil
-}
-
 func (s *MoveServer) Move(path string, to string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	// ------------ Path verification ---------------
-	if filepath.Dir(path) != s.sourceDir {
-		return fmt.Errorf("Trying to move file outside of %s", s.sourceDir)
-	}
 	pi, ok := s.pathInfo[path]
 	if !ok {
 		return fmt.Errorf("Requested move path %s not found in our data bank", path)
+	}
+	if filepath.Dir(path) != s.sourceDir {
+		return fmt.Errorf("Trying to move file outside of %s", s.sourceDir)
 	}
 	if pi.MoveInfo.Moving {
 		return fmt.Errorf("Requested move path %s is currently in move to %s", pi.MoveInfo.Target)
@@ -317,24 +299,23 @@ func (s *MoveServer) Move(path string, to string) error {
 		return err
 	}
 
-	// ------------ Target verification ---------------
-	var target string
-	var err error
-	if to == "movies" {
-		target, err = s.getTargetForMovieMove(path)
-	} else {
-		target, err = s.getTargetForSeriesMove(path, to)
+	// Target path verification
+	if !s.moveTargets[to] {
+		return fmt.Errorf("Requested target unrecognized")
 	}
-	if err != nil {
+	if _, err := os.Stat(to); err != nil && os.IsNotExist(err) {
 		pi.MoveInfo.LastError = err
 		s.pathInfo[path] = pi
 		return err
 	}
+
+	// Queue verification.
 	if len(s.moveChannel) == cap(s.moveChannel) {
-		return fmt.Errorf("Mv requests buffer buffer is full")
+		return fmt.Errorf("Mv requests buffer buffer is full.")
 	}
 
 	// Actually making a move.
+	target := filepath.Join(to, filepath.Base(path))
 	pi.MoveInfo.Moving = true
 	pi.MoveInfo.Target = target
 
@@ -389,6 +370,9 @@ func getSeriesTargetListing(seriesTarget string) ([]string, error) {
 	return listing, nil
 }
 
+// setCachedInfo updates cahed infor on MoveServer. paths is a list of paths in
+// the source dir, ntis is the new transmission info, nstl is the new
+// series target listing.
 func (s *MoveServer) setCachedInfo(paths []string, ntis []transmission.TorrentInfo, nstl []string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -440,7 +424,26 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []transmission.TorrentIn
 
 	s.cacheRefreshed = time.Now()
 	s.pathInfo = newPathInfo
-	s.seriesTargetListing = nstl
+
+	moveTargets := map[string]bool{}
+	for _, seriesListingPath := range nstl {
+		moveTargets[seriesListingPath] = true
+	}
+	for seriesTarget := range s.seriesTargets {
+		moveTargets[seriesTarget] = true
+	}
+	for moviesTarget := range s.moviesTargets {
+		moveTargets[moviesTarget] = true
+	}
+	moveTargets_sorted := []string{}
+	for target := range moveTargets {
+		moveTargets_sorted = append(moveTargets_sorted, target)
+	}
+
+	sort.Strings(moveTargets_sorted)
+
+	s.moveTargets_sorted = moveTargets_sorted
+	s.moveTargets = moveTargets
 }
 
 func (s *MoveServer) setDiskStats(nds []DiskStats) {
@@ -449,8 +452,11 @@ func (s *MoveServer) setDiskStats(nds []DiskStats) {
 
 	diskStats := []DiskStats{}
 	for _, ds := range nds {
-		if strings.HasPrefix(s.seriesTarget, ds.Path) || strings.HasPrefix(s.moviesTarget, ds.Path) {
-			diskStats = append(diskStats, ds)
+		for moveTarget := range s.moveTargets {
+			if strings.HasPrefix(moveTarget, ds.Path) {
+				diskStats = append(diskStats, ds)
+				break
+			}
 		}
 	}
 	s.diskStats = diskStats

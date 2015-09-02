@@ -43,7 +43,7 @@
 {{define "section"}}
 <div>
 {{if .PathInfo }}
-{{$stl :=  .SeriesTargets }}
+{{$mts :=  .MoveTargets }}
 <div class="pathinfo_table">
 <table>
   <colgroup>
@@ -107,9 +107,8 @@
 						<input type="submit" value="move">
 						to
 						<select name="target">
-							<option value="movies">movies</option>
-							{{if $stl}}
-								{{range $idx, $path := $stl}}
+							{{if $mts}}
+								{{range $idx, $path := $mts}}
 								<option value="{{print $path}}">{{print $path}}</option>
 								{{end}}
 							{{end}}
