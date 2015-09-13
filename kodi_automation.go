@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"path/filepath"
@@ -36,7 +38,47 @@ var (
 
 	basicAuthUsername = flag.String("auth_username", "admin", "Basic auth username")
 	basicAuthPassword = flag.String("auth_password", "4dm1n", "Basic auth password")
+
+	configFile = flag.String("config_file", "", "Config file")
 )
+
+type config struct {
+	Port          int      `json:"port,omitempty"`
+	SourceDir     string   `json:"source_dir,omitempty"`
+	MoviesTargets []string `json:"movies_targets,omitempty"`
+	SeriesTargets []string `json:"series_targets,omitempty"`
+
+	MvBufferSize  int `json:"mv_buffer_size,omitempty"`
+	MaxMvCommands int `json:"max_mv_commands,omitempty"`
+
+	Links       map[string]string `json:"links,omitempty"`
+	IframeLinks map[string]string `json:"iframe_links,omitempty"`
+
+	TemplatesPath string `json:"templates_paths,omitempty"`
+	ResourcesPath string `json:"resources_paths,omitempty"`
+
+	KodiAddress  string `json:"kodi_address,omitempty"`
+	KodiUsername string `json:"kodi_username,omitempty"`
+	KodiPassword string `json:"kodi_password,omitempty"`
+
+	BasicAuthUsername string `json:"basic_auth_username,omitempty"`
+	BasicAuthPassword string `json:"basic_auth_password,omitempty"`
+
+	WaitForIP int `json:"wait_for_ip,omitempty"`
+}
+
+func loadConfigFromFile(path string) (*config, error) {
+	bts, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var cfg *config = &config{}
+	err = json.Unmarshal(bts, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return cfg, nil
+}
 
 // getLocalIP returns the non loopback local IP of the host.
 // http://stackoverflow.com/a/31551220
@@ -81,59 +123,80 @@ func replaceLocalHost(m map[string]string, ip string) map[string]string {
 
 func main() {
 	flag.Parse()
-	var err error
-	if *sourceDir == "" || *moviesTarget == "" || *seriesTarget == "" {
-		log.Fatal("Missing source, series or movies target directory")
-	}
 
-	if *sourceDir, err = filepath.Abs(*sourceDir); err != nil {
-		log.Fatal(err)
-	}
-	moviesTargets := []string{}
-	for _, movieTargetPath := range strings.Split(*moviesTarget, ",") {
-		if movieTargetPath, err = filepath.Abs(movieTargetPath); err != nil {
+	var cfg *config
+
+	if *configFile != "" {
+		var err error
+		log.Printf("Loading from config")
+		cfg, err = loadConfigFromFile(*configFile)
+		log.Println(cfg)
+		if err != nil {
 			log.Fatal(err)
 		}
-		moviesTargets = append(moviesTargets, movieTargetPath)
+	} else {
+		links := parseCustomLinksFlag(*customLinks)
+		iframeLinks := parseCustomLinksFlag(*customIframeLinks)
+
+		cfg = &config{
+			Port:          *port,
+			SourceDir:     *sourceDir,
+			SeriesTargets: strings.Split(*seriesTarget, ","),
+			MoviesTargets: strings.Split(*moviesTarget, ","),
+
+			TemplatesPath: *templatesPath,
+			ResourcesPath: *resourcesPath,
+
+			MvBufferSize:  *mvBufferSize,
+			MaxMvCommands: *maxMvCommands,
+
+			KodiAddress:  *kodiAddress,
+			KodiUsername: *kodiUsername,
+			KodiPassword: *kodiPassword,
+
+			Links:       links,
+			IframeLinks: iframeLinks,
+
+			BasicAuthUsername: *basicAuthUsername,
+			BasicAuthPassword: *basicAuthPassword,
+
+			WaitForIP: *waitForIP,
+		}
 	}
-	if len(moviesTargets) == 0 {
+
+	log.Printf("CONFIG           = %#v", cfg)
+
+	var err error
+	if cfg.SourceDir == "" {
+		log.Fatal("Missing source directory")
+	}
+	if cfg.SourceDir, err = filepath.Abs(cfg.SourceDir); err != nil {
+		log.Fatal(err)
+	}
+	if len(cfg.MoviesTargets) == 0 {
 		log.Fatal(fmt.Errorf("Movies targets resolves to empty list"))
 	}
-	seriesTargets := []string{}
-	for _, seriesTargetPath := range strings.Split(*seriesTarget, ",") {
-		if seriesTargetPath, err = filepath.Abs(seriesTargetPath); err != nil {
-			log.Fatal(err)
-		}
-		seriesTargets = append(seriesTargets, seriesTargetPath)
-	}
-	if len(seriesTargets) == 0 {
+	if len(cfg.SeriesTargets) == 0 {
 		log.Fatal(fmt.Errorf("Series targets resolves to empty list"))
 	}
-	if *seriesTarget, err = filepath.Abs(*seriesTarget); err != nil {
-		log.Fatal(err)
-	}
-	if *maxMvCommands <= 5 {
-		*maxMvCommands = 5
-	}
-	if *mvBufferSize <= 5 {
-		*mvBufferSize = 5
-	}
-	log.Printf("PORT             = %d", *port)
-	log.Printf("SOURCE DIR       = %s", *sourceDir)
-	log.Printf("MOVIES TARGETS   = %v", moviesTargets)
-	log.Printf("SERIES TARGETS   = %s", seriesTargets)
-	log.Printf("MAX MV COMMANDS  = %d", *maxMvCommands)
-	log.Printf("MV BUFFER SIZE   = %d", *mvBufferSize)
-	log.Printf("WAIT FOR IP      = %d", *waitForIP)
-	log.Printf("LINKS            = %v", *customLinks)
-	log.Printf("IFRAME LINKS     = %v", *customIframeLinks)
 
+	if cfg.MaxMvCommands <= 5 {
+		cfg.MaxMvCommands = 5
+	}
+	if cfg.MvBufferSize <= 5 {
+		cfg.MvBufferSize = 5
+	}
+	if cfg.WaitForIP <= 5 {
+		cfg.WaitForIP = 5
+	}
+
+	// Trying to get IP.
 	var ip string
 	start := time.Now()
-	deadline := start.Add(time.Duration(*waitForIP) * time.Second)
+	deadline := start.Add(time.Duration(cfg.WaitForIP) * time.Second)
 	for {
 		if time.Now().After(deadline) {
-			log.Fatalf("Could not get local IP for %d seconds", *waitForIP)
+			log.Fatalf("Could not get local IP for %d seconds", cfg.WaitForIP)
 		}
 		ip, err = getLocalIP()
 		if err != nil {
@@ -146,25 +209,36 @@ func main() {
 		time.Sleep(time.Second * 5)
 	}
 
+	cfg.Links = replaceLocalHost(cfg.Links, ip)
+	cfg.IframeLinks = replaceLocalHost(cfg.IframeLinks, ip)
+
+	log.Printf("CONFIG           = %#v", cfg)
+	log.Printf("PORT             = %d", cfg.Port)
+	log.Printf("SOURCE DIR       = %s", cfg.SourceDir)
+	log.Printf("MOVIES TARGETS   = %v", cfg.MoviesTargets)
+	log.Printf("SERIES TARGETS   = %s", cfg.SeriesTargets)
+	log.Printf("MAX MV COMMANDS  = %d", cfg.MaxMvCommands)
+	log.Printf("MV BUFFER SIZE   = %d", cfg.MvBufferSize)
+	log.Printf("WAIT FOR IP      = %d", cfg.WaitForIP)
+	log.Printf("LINKS            = %v", cfg.Links)
+	log.Printf("IFRAME LINKS     = %v", cfg.IframeLinks)
+	log.Printf("LINKS            = %v", cfg.Links)
+	log.Printf("IFRAME LINKS     = %v", cfg.IframeLinks)
 	log.Printf("IP               = %s", ip)
-	links := replaceLocalHost(parseCustomLinksFlag(*customLinks), ip)
-	iframeLinks := replaceLocalHost(parseCustomLinksFlag(*customIframeLinks), ip)
-	log.Printf("LINKS            = %v", links)
-	log.Printf("IFRAME LINKS     = %v", iframeLinks)
 
 	// Server.
 	s := server.NewMyHTTPServer(
-		*port,
-		*basicAuthUsername,
-		*basicAuthPassword,
-		*templatesPath,
-		*resourcesPath,
-		links,
-		iframeLinks)
+		cfg.Port,
+		cfg.BasicAuthUsername,
+		cfg.BasicAuthPassword,
+		cfg.TemplatesPath,
+		cfg.ResourcesPath,
+		cfg.Links,
+		cfg.IframeLinks)
 
 	// Initialize move server view.
 	moveServer, err := moveserver.New(
-		*sourceDir, moviesTargets, seriesTargets, *maxMvCommands, *mvBufferSize)
+		cfg.SourceDir, cfg.MoviesTargets, cfg.SeriesTargets, cfg.MaxMvCommands, cfg.MvBufferSize)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -178,11 +252,11 @@ func main() {
 	views = append(views, moveServerView)
 
 	// Wrap view.
-	views = append(views, wrapview.New(iframeLinks))
+	views = append(views, wrapview.New(cfg.IframeLinks))
 
 	// Kodi stats view.
-	if *kodiAddress != "" && *kodiUsername != "" && *kodiPassword != "" {
-		views = append(views, kodiview.New(*kodiAddress, *kodiUsername, *kodiPassword))
+	if cfg.KodiAddress != "" && cfg.KodiUsername != "" && cfg.KodiPassword != "" {
+		views = append(views, kodiview.New(cfg.KodiAddress, cfg.KodiUsername, cfg.KodiPassword))
 	} else {
 		log.Println("Kodi address, username or password missing. Skipping kodi stats view.")
 	}
