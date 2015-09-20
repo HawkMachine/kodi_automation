@@ -81,9 +81,9 @@ func updateDiskStats(s *MoveServer) {
 				ds = append(ds, DiskStats{
 					Path:       grs[6],
 					Filesystem: grs[1],
-					Size:       grs[2], //size,
-					Used:       grs[3], // used,
-					Avail:      grs[4], //avail,
+					Size:       grs[2],
+					Used:       grs[3],
+					Avail:      grs[4],
 				})
 			}
 		}
@@ -432,15 +432,18 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []transmission.TorrentIn
 	for seriesTarget := range s.seriesTargets {
 		moveTargets[seriesTarget] = true
 	}
+	seriesTargets_sorted := []string{}
+	for target := range moveTargets {
+		seriesTargets_sorted = append(seriesTargets_sorted, target)
+	}
+	sort.Strings(seriesTargets_sorted)
+
+	moveTargets_sorted := []string{}
 	for moviesTarget := range s.moviesTargets {
 		moveTargets[moviesTarget] = true
+		moveTargets_sorted = append(moveTargets_sorted, moviesTarget)
 	}
-	moveTargets_sorted := []string{}
-	for target := range moveTargets {
-		moveTargets_sorted = append(moveTargets_sorted, target)
-	}
-
-	sort.Strings(moveTargets_sorted)
+	moveTargets_sorted = append(moveTargets_sorted, seriesTargets_sorted...)
 
 	s.moveTargets_sorted = moveTargets_sorted
 	s.moveTargets = moveTargets
