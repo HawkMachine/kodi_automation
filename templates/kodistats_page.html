@@ -19,11 +19,33 @@
 						console.log("AJAX SUCCESS", result)
 						var episodes = result.result.episodes;
 						drawWatchedEpiosdesByDateChart(result.result.episodes);
+						writeEpisodesList(result.result.episodes);
 					},
 				})
 				.fail(function(jqXHR, text_status){
 					$("#watched_episodes_chart").text("Request failed: " + text_status);
 				});
+			}
+
+			function writeEpisodesList(episodes) {
+				episodes.sort(function(ep1, ep2) {
+					if (ep1.lastplayed == ep2.lastplayed) {
+						return 0;
+					} else if (ep1.lastplayed < ep2.lastplayed) {
+						return 1;
+					} else {
+						return -1
+					}
+				});
+				var div = $("#watched_episodes_list table");
+				for (var i = 0; i < episodes.length; i++) {
+					var ep = episodes[i];
+					div.append("<tr>"
+							+ "<td>" + ep.lastplayed + "</td>"
+							+ "<td>" + ep.showtitle + "</td>"
+							+ "<td>" + ep.title + "</td>"
+							+ "</tr>");
+				}
 			}
 
 			function drawWatchedEpiosdesByDateChart(episodes) {
@@ -69,5 +91,9 @@
 
 <div id="watched_episodes_chart" style="width: 900px; height: 500px">
 	<img class="centered" src="/resources/loading.gif"/>
+</div>
+<div id="watched_episodes_list" ng-app="kodi" ng-controller="watchedEpisodes">
+	<table>
+	</table>
 </div>
 {{end}}
