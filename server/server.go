@@ -76,6 +76,7 @@ type MyHTTPServer struct {
 	iframeLinks map[string]string
 
 	templatesPath string
+	resourcesPath string
 
 	basicAuthUsername string
 	basicAuthPassword string
@@ -149,7 +150,7 @@ func (s *MyHTTPServer) RegisterView(v View) error {
 }
 
 func (s *MyHTTPServer) Run() {
-	http.Handle("/resources/", http.StripPrefix("/resources/", http.FileServer(http.Dir("resources"))))
+	http.Handle("/resources/", http.StripPrefix("/resources/", http.FileServer(http.Dir(s.resourcesPath))))
 
 	bindAddr := fmt.Sprintf(":%d", s.port)
 	log.Printf("Bind address %s", bindAddr)
@@ -210,10 +211,12 @@ func NewMyHTTPServer(port int, basicAuthUsername string, basicAuthPassword strin
 		views:           map[string]View{},
 		parsedTemplates: map[string]map[string]*template.Template{},
 
-		port:          port,
-		links:         links,
-		iframeLinks:   iframeLinks,
+		port:        port,
+		links:       links,
+		iframeLinks: iframeLinks,
+
 		templatesPath: templatesPath,
+		resourcesPath: resourcesPath,
 
 		basicAuthUsername: basicAuthUsername,
 		basicAuthPassword: basicAuthPassword,
