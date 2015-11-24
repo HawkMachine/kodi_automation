@@ -43,7 +43,7 @@ func (ksv *KodiView) kodiStatsPageHandler(w http.ResponseWriter, r *http.Request
 	context := struct {
 	}{}
 
-	s.RenderTemplate(w, r, ksv.GetName(), "kodistats", context)
+	s.RenderTemplate(w, r, ksv.GetName(), "kodistats", "Kodi Stats", context)
 }
 
 func (ksv *KodiView) kodiStatsGetDataHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {

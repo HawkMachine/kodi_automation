@@ -43,11 +43,13 @@ func (wv *WrapView) wrapHandler(w http.ResponseWriter, r *http.Request, s server
 	}
 
 	context := struct {
-		WrapURL string
+		WrapName string
+		WrapURL  string
 	}{
-		WrapURL: url,
+		WrapName: name,
+		WrapURL:  url,
 	}
-	s.RenderTemplate(w, r, wv.GetName(), "wrap", context)
+	s.RenderTemplate(w, r, wv.GetName(), "wrap", name, context)
 }
 
 func New(iframeLinks map[string]string) *WrapView {

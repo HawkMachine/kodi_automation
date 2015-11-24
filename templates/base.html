@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>Kodi helper - {{.Title}}</title>
+	<title>Kodi Helper{{if .Title}} - {{print .Title}}{{end}}</title>
 	{{if .IsMobile }}
 		<link rel="stylesheet" type="text/css" href="/resources/m_style.css">
 	{{else}}
@@ -60,7 +60,6 @@
 		{{end}}
 	{{end}}
 
-	{{if .Title}}<h1>{{.Title}}</h1>{{end}}
 	<div id="section">
 	{{template "section" .ContentContext}}
 	</div>

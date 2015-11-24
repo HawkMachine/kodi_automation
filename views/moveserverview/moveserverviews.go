@@ -141,5 +141,5 @@ func (msv *MoveServerView) pathInfoPageHandler(w http.ResponseWriter, r *http.Re
 		MvBufferElems:   mvBuffElems,
 		DiskStats:       msv.moveServer.GetDiskStats(),
 	}
-	s.RenderTemplate(w, r, msv.GetName(), "torrents_page", context)
+	s.RenderTemplate(w, r, msv.GetName(), "torrents_page", "Torrents", context)
 }

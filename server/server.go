@@ -13,7 +13,7 @@ import (
 
 // Interface used by ViewHandler
 type HTTPServer interface {
-	RenderTemplate(w http.ResponseWriter, r *http.Request, viewName, templateName string, context interface{})
+	RenderTemplate(w http.ResponseWriter, r *http.Request, viewName, templateName string, title string, context interface{})
 }
 
 // Type representing a particular handler for a View.
@@ -82,13 +82,14 @@ type MyHTTPServer struct {
 	basicAuthPassword string
 }
 
-func (s *MyHTTPServer) RenderTemplate(w http.ResponseWriter, r *http.Request, viewName, templateName string, context interface{}) {
+func (s *MyHTTPServer) RenderTemplate(w http.ResponseWriter, r *http.Request, viewName, templateName string, title string, context interface{}) {
 	t, err := s.getTemplate(viewName, templateName)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	baseContext := s.getBaseContext(r)
 	baseContext.ContentContext = context
+	baseContext.Title = title
 	err = t.ExecuteTemplate(w, "base", baseContext)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
