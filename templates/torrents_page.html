@@ -44,6 +44,19 @@
 <div>
 {{if .PathInfo }}
 {{$mts :=  .MoveTargets }}
+<script>
+$('document').ready(function() {
+	$( ".move_target_select" ).autocomplete({
+		minLength: 0,
+	  source: [
+			{{range $idx, $path := $mts}}
+			{{$path}},
+			{{end}}
+		]
+	});
+});
+</script>
+
 <div class="pathinfo_table">
 <table>
   <colgroup>
@@ -106,13 +119,7 @@
 					<form action="/move" method="post">
 						<input type="submit" value="move">
 						to
-						<select name="target">
-							{{if $mts}}
-								{{range $idx, $path := $mts}}
-								<option value="{{print $path}}">{{print $path}}</option>
-								{{end}}
-							{{end}}
-						</select>
+						<input name="target" class="move_target_select">
 						<input type="hidden" name="path" value="{{print $pathInfo.Path}}">
 						<input type="hidden" name="type" value="move">
 					</form>
