@@ -196,9 +196,12 @@ func New(address, username, password string, targets []string) *KodiView {
 		k:       kodi.New(address+"/jsonrpc", username, password),
 		targets: targets,
 		movieExtensions: map[string]bool{
-			".mkv": true,
-			".mp4": true,
-			".avi": true,
+			".mkv":  true,
+			".mp4":  true,
+			".avi":  true,
+			".m4v":  true,
+			".ogm":  true,
+			".rmvb": true,
 		},
 	}
 }
