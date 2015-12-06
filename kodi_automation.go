@@ -256,7 +256,10 @@ func main() {
 
 	// Kodi stats view.
 	if cfg.KodiAddress != "" && cfg.KodiUsername != "" && cfg.KodiPassword != "" {
-		views = append(views, kodiview.New(cfg.KodiAddress, cfg.KodiUsername, cfg.KodiPassword))
+		var scanTargets []string
+		scanTargets = append(scanTargets, cfg.MoviesTargets...)
+		scanTargets = append(scanTargets, cfg.SeriesTargets...)
+		views = append(views, kodiview.New(cfg.KodiAddress, cfg.KodiUsername, cfg.KodiPassword, scanTargets))
 	} else {
 		log.Println("Kodi address, username or password missing. Skipping kodi stats view.")
 	}

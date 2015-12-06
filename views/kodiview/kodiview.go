@@ -3,14 +3,36 @@ package kodiview
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/HawkMachine/kodi_automation/server"
 	"github.com/HawkMachine/kodi_go_api/v6/kodi"
 )
 
+func slice2map(a []string) map[string]bool {
+	r := map[string]bool{}
+	for _, s := range a {
+		r[s] = true
+	}
+	return r
+}
+
+func diff(a, b map[string]bool) map[string]bool {
+	r := map[string]bool{}
+	for s := range a {
+		if _, ok := b[s]; !ok {
+			r[s] = true
+		}
+	}
+	return r
+}
+
 type KodiView struct {
-	k *kodi.Kodi
+	k               *kodi.Kodi
+	targets         []string
+	movieExtensions map[string]bool
 }
 
 func (ksv *KodiView) GetName() string {
@@ -23,6 +45,10 @@ func (ksv *KodiView) GetTemplates() map[string][]string {
 			"base.html",
 			"kodistats_page.html",
 		},
+		"kodihealth": []string{
+			"base.html",
+			"kodihealth_page.html",
+		},
 	}
 }
 
@@ -30,12 +56,14 @@ func (ksv *KodiView) GetHandlers() map[string]server.ViewHandle {
 	return map[string]server.ViewHandle{
 		"/kodi/stats":           server.NewViewHandle(ksv.kodiStatsPageHandler),
 		"/kodi/stats/_getdata/": server.NewViewHandle(ksv.kodiStatsGetDataHandler),
+		"/kodi/health":          server.NewViewHandle(ksv.kodiHealthPageHandler),
 	}
 }
 
 func (ksv *KodiView) GetMenu() (string, map[string]string) {
 	return "Kodi", map[string]string{
-		"Stats": "/kodi/stats",
+		"Stats":  "/kodi/stats",
+		"Health": "/kodi/health",
 	}
 }
 
@@ -71,6 +99,106 @@ func (ksv *KodiView) kodiStatsGetDataHandler(w http.ResponseWriter, r *http.Requ
 	w.Write(jsonData)
 }
 
-func New(address, username, password string) *KodiView {
-	return &KodiView{k: kodi.New(address+"/jsonrpc", username, password)}
+func directoryListing(dirname string, extensions map[string]bool) ([]string, error) {
+	var res []string
+	err := filepath.Walk(dirname, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		if _, ok := extensions[filepath.Ext(path)]; ok {
+			res = append(res, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func filesFromVideoLibrary(k *kodi.Kodi) ([]string, error) {
+	mResp, err := k.VideoLibrary.GetMovies(
+		&kodi.VideoLibraryGetMoviesParams{
+			Properties: []kodi.VideoFieldsMovie{
+				kodi.MOVIE_FIELD_FILE,
+			},
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	eResp, err := k.VideoLibrary.GetEpisodes(
+		&kodi.VideoLibraryGetEpisodesParams{
+			Properties: []kodi.VideoFieldsEpisode{
+				kodi.EPISODE_FIELD_FILE,
+			},
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	// Combine the files into one list.
+	var r []string
+	for _, res := range mResp.Result.Movies {
+		r = append(r, res.File)
+	}
+	for _, res := range eResp.Result.Episodes {
+		r = append(r, res.File)
+	}
+	return r, nil
+}
+
+func (ksv *KodiView) filesOnDisk() ([]string, error) {
+	var paths []string
+	for _, target := range ksv.targets {
+		p, err := directoryListing(target, ksv.movieExtensions)
+		if err != nil {
+			return nil, err
+		}
+		paths = append(paths, p...)
+	}
+	return paths, nil
+}
+
+func (ksv *KodiView) kodiHealthPageHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {
+	kodi, err := filesFromVideoLibrary(ksv.k)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	disk, err := ksv.filesOnDisk()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	kodiMap := slice2map(kodi)
+	diskMap := slice2map(disk)
+
+	kodiOnly := diff(kodiMap, diskMap)
+	diskOnly := diff(diskMap, kodiMap)
+
+	context := struct {
+		FilesOnDiskMissingInKodi map[string]bool
+		FilesInKodiMissingOnDisk map[string]bool
+	}{
+		FilesOnDiskMissingInKodi: diskOnly,
+		FilesInKodiMissingOnDisk: kodiOnly,
+	}
+
+	s.RenderTemplate(w, r, ksv.GetName(), "kodihealth", "Kodi Health", context)
+}
+
+func New(address, username, password string, targets []string) *KodiView {
+	return &KodiView{
+		k:       kodi.New(address+"/jsonrpc", username, password),
+		targets: targets,
+		movieExtensions: map[string]bool{
+			".mkv": true,
+			".mp4": true,
+			".avi": true,
+		},
+	}
 }

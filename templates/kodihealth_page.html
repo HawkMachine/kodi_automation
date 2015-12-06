@@ -1,0 +1,14 @@
+{{define "section"}}
+	<h2>Files in Kodi missing on disk</h2>
+	<table>
+		{{range $s, $ok := .FilesInKodiMissingOnDisk}}
+		<tr><td>{{$s}}</td></tr>
+		{{end}}
+	</table>
+	<h2>Files on disk missing in Kodi</h2>
+	<table>
+		{{range $s, $ok := .FilesOnDiskMissingInKodi}}
+		<tr><td>{{$s}}</td></tr>
+		{{end}}
+	</table>
+{{end}}
