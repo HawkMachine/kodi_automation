@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/HawkMachine/kodi_automation/server"
@@ -141,13 +142,24 @@ func filesFromVideoLibrary(k *kodi.Kodi) ([]string, error) {
 	}
 
 	// Combine the files into one list.
-	var r []string
+	var raw []string
 	for _, res := range mResp.Result.Movies {
-		r = append(r, res.File)
+		raw = append(raw, res.File)
 	}
 	for _, res := range eResp.Result.Episodes {
-		r = append(r, res.File)
+		raw = append(raw, res.File)
 	}
+	var r []string
+	for _, s := range raw {
+		if strings.HasPrefix(s, "stack://") {
+			for _, i := range strings.Split(s[len("stack://"):], " , ") {
+				r = append(r, i)
+			}
+		} else {
+			r = append(r, s)
+		}
+	}
+
 	return r, nil
 }
 
