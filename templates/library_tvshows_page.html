@@ -1,0 +1,11 @@
+{{define "section"}}
+<table>
+	{{ range $idx, $tvshow := .TVShows }}
+	<tr>
+		<td width="20%"><a href="http://imdb.com/title/{{$tvshow.IMDBNumber}}">{{ print $tvshow.Title }}<a/></td>
+		<td width="4em">{{ print $tvshow.Rating }}</td>
+		<td>{{ print $tvshow.Plot }}</td>
+	</tr>
+	{{ end }}
+</table>
+{{end}}

@@ -50,21 +50,33 @@ func (ksv *KodiView) GetTemplates() map[string][]string {
 			"base.html",
 			"kodihealth_page.html",
 		},
+		"library_movies": []string{
+			"base.html",
+			"library_movies_page.html",
+		},
+		"library_tvshows": []string{
+			"base.html",
+			"library_tvshows_page.html",
+		},
 	}
 }
 
 func (ksv *KodiView) GetHandlers() map[string]server.ViewHandle {
 	return map[string]server.ViewHandle{
-		"/kodi/stats":           server.NewViewHandle(ksv.kodiStatsPageHandler),
-		"/kodi/stats/_getdata/": server.NewViewHandle(ksv.kodiStatsGetDataHandler),
-		"/kodi/health":          server.NewViewHandle(ksv.kodiHealthPageHandler),
+		"/kodi/stats":            server.NewViewHandle(ksv.kodiStatsPageHandler),
+		"/kodi/stats/_getdata/":  server.NewViewHandle(ksv.kodiStatsGetDataHandler),
+		"/kodi/health":           server.NewViewHandle(ksv.kodiHealthPageHandler),
+		"/kodi/library/movies":   server.NewViewHandle(ksv.kodiLibraryMoviesPageHandler),
+		"/kodi/library/tv_shows": server.NewViewHandle(ksv.kodiLibraryTVShowsPageHandler),
 	}
 }
 
 func (ksv *KodiView) GetMenu() (string, map[string]string) {
 	return "Kodi", map[string]string{
-		"Stats":  "/kodi/stats",
-		"Health": "/kodi/health",
+		"Stats":             "/kodi/stats",
+		"Health":            "/kodi/health",
+		"Library: Movies":   "/kodi/library/movies",
+		"Library: TV Shows": "/kodi/library/tv_shows",
 	}
 }
 
@@ -201,6 +213,61 @@ func (ksv *KodiView) kodiHealthPageHandler(w http.ResponseWriter, r *http.Reques
 	}
 
 	s.RenderTemplate(w, r, ksv.GetName(), "kodihealth", "Kodi Health", context)
+}
+
+func (ksv *KodiView) kodiLibraryMoviesPageHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {
+	mResp, err := ksv.k.VideoLibrary.GetMovies(
+		&kodi.VideoLibraryGetMoviesParams{
+			Properties: []kodi.VideoFieldsMovie{
+				kodi.MOVIE_FIELD_TITLE,
+				kodi.MOVIE_FIELD_PLOT,
+				kodi.MOVIE_FIELD_IMDB_NUMBER,
+				kodi.MOVIE_FIELD_RATING,
+				kodi.MOVIE_FIELD_DIRECTOR,
+			},
+			Sort: &kodi.ListSort{
+				Method: kodi.SORT_METHOD_TITLE,
+			},
+		})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	context := struct {
+		Movies []*kodi.VideoDetailsMovie
+	}{
+		Movies: mResp.Result.Movies,
+	}
+
+	s.RenderTemplate(w, r, ksv.GetName(), "library_movies", "Kodi Library Movies", context)
+}
+
+func (ksv *KodiView) kodiLibraryTVShowsPageHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {
+	mResp, err := ksv.k.VideoLibrary.GetTVShows(
+		&kodi.VideoLibraryGetTVShowsParams{
+			Properties: []kodi.VideoFieldsTVShow{
+				kodi.TV_SHOW_FIELD_TITLE,
+				kodi.TV_SHOW_FIELD_IMDB_NUMBER,
+				kodi.TV_SHOW_FIELD_PLOT,
+				kodi.TV_SHOW_FIELD_RATING,
+			},
+			Sort: &kodi.ListSort{
+				Method: kodi.SORT_METHOD_TITLE,
+			},
+		})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	context := struct {
+		TVShows []*kodi.VideoDetailsTVShow
+	}{
+		TVShows: mResp.Result.TVShows,
+	}
+
+	s.RenderTemplate(w, r, ksv.GetName(), "library_tvshows", "Kodi Library Movies", context)
 }
 
 func New(address, username, password string, targets []string) *KodiView {
