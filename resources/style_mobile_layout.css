@@ -1,0 +1,60 @@
+html {
+	font-size: 3em;
+}
+input {
+	font-size: 1em;
+}
+
+.torrent_name {
+	display: block;
+}
+
+.errorbox {
+	margin: 1em;
+}
+
+/* Navigation */
+#nav {
+	height: 100%;
+	margin-right: 1em;
+	width: 100%;
+}
+.navbox {
+	margin-bottom: 1em;	
+}
+.navbox_title {
+	display: block;
+	width: 100%;
+}
+
+/* Main section */
+#section {
+  width:100%;
+}
+
+/* Footer */
+#footer {
+  clear:both;
+}
+/* Statistics box */
+#statistics {
+	height: 180px;
+	width: 100%;
+}
+.navbox_content .subtitle {
+	margin-right: 1em;
+	display: block;
+	float: left;
+	width: 9em;
+}
+.navbox_content_section {
+	margin-bottom: .5em;
+}
+iframe {
+	height: 800px;
+	width: 100%;
+}
+.pathinfo_table {
+	width: 100%;
+	margin-bottom: 1em;
+}
