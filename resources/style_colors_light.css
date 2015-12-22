@@ -33,13 +33,8 @@ tr:nth-child(even) {
   color: darkblue;
 	font-weight: bold;
 }
-.centered {
-	display: block;
-	margin: auto;
-}
 .torrent_name {
 	font-weight: bold;
-	display: block;
 }
 .torrent_state {
 	font-weight: bold;
@@ -58,7 +53,6 @@ tr:nth-child(even) {
 	background: #FF9900;
 	border: solid 3px #FF3300;
 	font-weight: bold;
-	margin: 1em;
 	padding: 1em;
 }
 #header {
@@ -72,20 +66,14 @@ tr:nth-child(even) {
 #nav {
 	height: 100%;
 	background-color:#eeeeee;
-	float:left;
-	margin-right: 1em;
 	padding: 5px;
-	width: 20%;
 }
 .navbox {
-	margin-bottom: 1em;	
 	border-left: 2px solid black;
 }
 .navbox_title {
 	background: black;
 	color: white;
-	display: block;
-	width: 100%;
 	text-align: center;
 }
 .navbox_content {
@@ -94,43 +82,25 @@ tr:nth-child(even) {
 
 /* Main section */
 #section {
-    width:70%;
-    float:left;
-    padding:10px;
+  padding: 10px;
 }
 
 /* Footer */
 #footer {
-    background-color:black;
-    color:white;
-    clear:both;
-    text-align:center;
-    padding:5px;
+	background-color:black;
+	color:white;
+	text-align:center;
+	padding:5px;
 }
 /* Statistics box */
 #statistics {
 	height: 180px;
-	margin-bottom: 1em;
-	width: 100%;
 }
 .navbox_content .subtitle {
 	font-weight: bold;
-	margin-right: 1em;
-	display: block;
-	float: left;
-	width: 8em;
 	text-align: right;
 }
 .navbox_content_section {
 	border-bottom: 1px solid black;
 	padding-bottom: .5em;
-	margin-bottom: .5em;
-}
-iframe {
-	height: 800px;
-	width: 100%;
-}
-.pathinfo_table {
-	width: 100%;
-	margin-bottom: 1em;
 }
