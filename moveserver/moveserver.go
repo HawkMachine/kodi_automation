@@ -108,7 +108,7 @@ func updateCache(s *MoveServer) {
 	paths, err := directoryListing(s.sourceDir, 1, false)
 	if err != nil {
 		log.Printf("Listing source target error: %v\n", err)
-		return
+		paths = nil
 	}
 
 	var seriesListing []string
@@ -116,7 +116,7 @@ func updateCache(s *MoveServer) {
 		sl, err := getSeriesTargetListing(seriesTarget)
 		if err != nil {
 			log.Printf("Listing series target error: %v\n", err)
-			return
+			continue
 		}
 		seriesListing = append(seriesListing, sl...)
 	}
@@ -124,7 +124,7 @@ func updateCache(s *MoveServer) {
 	tis, err := s.transmissionCli.GetTorrents(s.sourceDir)
 	if err != nil {
 		log.Printf("Getting torrents info error: %v\n", err)
-		return
+		tis = nil
 	}
 
 	s.setCachedInfo(paths, tis, seriesListing)
