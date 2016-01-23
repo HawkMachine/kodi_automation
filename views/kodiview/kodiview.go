@@ -180,7 +180,7 @@ func (ksv *KodiView) filesOnDisk() ([]string, error) {
 	for _, target := range ksv.targets {
 		p, err := directoryListing(target, ksv.movieExtensions)
 		if err != nil {
-			return nil, err
+			continue
 		}
 		paths = append(paths, p...)
 	}
