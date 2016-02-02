@@ -16,6 +16,7 @@
 	float:left;
 	margin-right: 1em;
 	width: 20%;
+	float: left;
 }
 .navbox {
 	margin-bottom: 1em;	
@@ -27,7 +28,10 @@
 
 /* Main section */
 #section {
-  padding:10px;
+}
+#contents {
+	float: left;
+	width: 75%;
 }
 
 /* Footer */

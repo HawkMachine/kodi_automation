@@ -1,3 +1,6 @@
+body {
+	font-family: "Arial";
+}
 table {
   border-collapse: collapse;
 }
@@ -75,9 +78,14 @@ tr:nth-child(even) {
 	background: black;
 	color: white;
 	text-align: center;
+	font-weight: bold;
+	text-transform: uppercase;
 }
 .navbox_content {
 	padding: 0.5em;
+}
+.navbox_content div {
+	margin-bottom: 0.2em;
 }
 
 /* Main section */
