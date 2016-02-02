@@ -125,6 +125,12 @@ func directoryListing(dirname string) ([]string, error) {
 		if err != nil {
 			return err
 		}
+		if path == dirname {
+			return nil
+		}
+		if filepath.HasPrefix(path, dirname) && len(path) > len(dirname) {
+			path = path[len(dirname)+1:]
+		}
 		res = append(res, path)
 		return nil
 	})

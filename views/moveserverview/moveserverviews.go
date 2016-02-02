@@ -45,7 +45,7 @@ func (msv *MoveServerView) GetTemplates() map[string][]string {
 
 func (msv *MoveServerView) GetHandlers() map[string]server.ViewHandle {
 	return map[string]server.ViewHandle{
-		"/":             server.NewViewHandle(msv.pathInfoPageHandler),
+		"/":             server.NewViewHandle(msv.moveDashboardPageHandler),
 		"/move":         server.NewViewHandle(msv.movePostHandler),
 		"/update/cache": server.NewViewHandle(msv.updateCacheHandler),
 		"/update/disks": server.NewViewHandle(msv.updateDiskStatsHandler),
@@ -104,7 +104,7 @@ func (msv *MoveServerView) updateDiskStatsHandler(w http.ResponseWriter, r *http
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-func (msv *MoveServerView) pathInfoPageHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {
+func (msv *MoveServerView) moveDashboardPageHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {
 	// ---- prepare pathInfo and pathInfoHistory
 	pathInfo, pathInfoHistory := msv.moveServer.GetPathInfoAndPathInfoHistory()
 	pathInfoList := PathInfoSlice{}
