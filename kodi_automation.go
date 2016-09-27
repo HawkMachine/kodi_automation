@@ -214,6 +214,8 @@ func main() {
 
 	log.Printf("CONFIG           = %#v", cfg)
 	log.Printf("PORT             = %d", cfg.Port)
+	log.Printf("TEMPLATES PATH   = %s", cfg.TemplatesPath)
+	log.Printf("RESOURCES PATH   = %s", cfg.ResourcesPath)
 	log.Printf("SOURCE DIR       = %s", cfg.SourceDir)
 	log.Printf("MOVIES TARGETS   = %v", cfg.MoviesTargets)
 	log.Printf("SERIES TARGETS   = %s", cfg.SeriesTargets)
@@ -255,7 +257,7 @@ func main() {
 	views = append(views, wrapview.New(cfg.IframeLinks))
 
 	// Kodi stats view.
-	if cfg.KodiAddress != "" && cfg.KodiUsername != "" && cfg.KodiPassword != "" {
+	if cfg.KodiAddress != "" {
 		var scanTargets []string
 		scanTargets = append(scanTargets, cfg.MoviesTargets...)
 		scanTargets = append(scanTargets, cfg.SeriesTargets...)
