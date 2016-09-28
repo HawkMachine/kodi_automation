@@ -1,0 +1,10 @@
+{
+	"port": 9080,
+	"source_dir": ".",
+	"movies_targets": ["/tmp"],
+	"series_targets": ["/tmp"],
+	"resources_paths": "resources",
+	"templates_paths": "templates",
+	"end": true
+}
+
