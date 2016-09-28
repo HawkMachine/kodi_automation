@@ -20,6 +20,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/angular_material/1.1.1/angular-material.min.css">
 	<script src="https://ajax.googleapis.com/ajax/libs/angular_material/1.1.1/angular-material.min.js"></script>
+	{{template "head" .ContentContext}}
 </head>
 <body ng-app="BlankApp" ng-cloak>
   <!-- Angular Material requires Angular.js Libraries -->
@@ -53,6 +54,15 @@
         md-whiteframe="4">
 	<img src="/resources/kodi_helper_logo_wide.svg" width="100%"/>
 	<md-button ng-href="/" class="md-primary">Home</md-button>
+
+	{{range $viewName, $viewUrls := .ViewsMenu}}
+	{{if $viewUrls }}
+	{{range $name, $url := $viewUrls }}
+	<md-button ng-href="{{print $url}}" class="md-primary">{{print $name}}</md-button>
+	{{end}}
+	{{end}}
+	{{end}}
+
 
 	{{if .IframeLinks}}
 	<md-divider></md-divider>

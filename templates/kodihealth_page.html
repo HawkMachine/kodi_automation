@@ -1,14 +1,31 @@
 {{define "section"}}
-	<h2>Files in Kodi missing on disk</h2>
-	<table>
+<md-card>
+<md-card-title>
+<md-card-title-text class="md-headline">
+	Files in Kodi missing on disk
+</md-card-title-text>
+</md-card-title>
+<md-card-content>
+	<ul>
 		{{range $s, $ok := .FilesInKodiMissingOnDisk}}
-		<tr><td>{{$s}}</td></tr>
+		<li class="path">{{$s}}</li>
 		{{end}}
-	</table>
-	<h2>Files on disk missing in Kodi</h2>
-	<table>
+	</ul>
+</md-card-content>
+</md-card>
+
+<md-card>
+<md-card-title>
+<md-card-title-text class="md-headline">
+	Files on disk missing in Kodi
+</md-card-title-text>
+</md-card-title>
+<md-card-content>
+	<ul>
 		{{range $s, $ok := .FilesOnDiskMissingInKodi}}
-		<tr><td>{{$s}}</td></tr>
+		<li class="path">{{$s}}</li>
 		{{end}}
-	</table>
+	</ul>
+</md-card-content>
+</md-card>
 {{end}}

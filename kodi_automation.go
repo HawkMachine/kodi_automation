@@ -263,7 +263,7 @@ func main() {
 		scanTargets = append(scanTargets, cfg.SeriesTargets...)
 		views = append(views, kodiview.New(cfg.KodiAddress, cfg.KodiUsername, cfg.KodiPassword, scanTargets))
 	} else {
-		log.Println("Kodi address, username or password missing. Skipping kodi stats view.")
+		log.Println("Kodi address missing. Skipping kodi stats view.")
 	}
 
 	// Run server.

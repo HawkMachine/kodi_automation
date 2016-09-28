@@ -73,10 +73,10 @@ func (ksv *KodiView) GetHandlers() map[string]server.ViewHandle {
 
 func (ksv *KodiView) GetMenu() (string, map[string]string) {
 	return "Kodi", map[string]string{
-		"Stats":             "/kodi/stats",
-		"Health":            "/kodi/health",
-		"Library: Movies":   "/kodi/library/movies",
-		"Library: TV Shows": "/kodi/library/tv_shows",
+		"Kodi Stats":       "/kodi/stats",
+		"Kodi Health":      "/kodi/health",
+		"Movies Library":   "/kodi/library/movies",
+		"TV Shows Library": "/kodi/library/tv_shows",
 	}
 }
 
@@ -240,7 +240,7 @@ func (ksv *KodiView) kodiLibraryMoviesPageHandler(w http.ResponseWriter, r *http
 		Movies: mResp.Result.Movies,
 	}
 
-	s.RenderTemplate(w, r, ksv.GetName(), "library_movies", "Kodi Library Movies", context)
+	s.RenderTemplate(w, r, ksv.GetName(), "library_movies", "Movies Library", context)
 }
 
 func (ksv *KodiView) kodiLibraryTVShowsPageHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {
@@ -267,7 +267,7 @@ func (ksv *KodiView) kodiLibraryTVShowsPageHandler(w http.ResponseWriter, r *htt
 		TVShows: mResp.Result.TVShows,
 	}
 
-	s.RenderTemplate(w, r, ksv.GetName(), "library_tvshows", "Kodi Library Movies", context)
+	s.RenderTemplate(w, r, ksv.GetName(), "library_tvshows", "Tv Shows Library", context)
 }
 
 func New(address, username, password string, targets []string) *KodiView {
