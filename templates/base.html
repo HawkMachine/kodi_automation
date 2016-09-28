@@ -3,70 +3,93 @@
 <html>
 <head>
 	<title>Kodi Helper{{if .Title}} - {{print .Title}}{{end}}</title>
+<!--
 	{{if .IsMobile }}
 		<link rel="stylesheet" type="text/css" href="/resources/style_mobile_layout.css">
 	{{else}}
 		<link rel="stylesheet" type="text/css" href="/resources/style_browser_layout.css">
 	{{end}}
+	{{template "head" .ContentContext}}
+-->
 	<link rel="stylesheet" type="text/css" href="/resources/style_colors_light.css">
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.js"></script>
 	<link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
 	<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.js"></script>
-	{{template "head" .ContentContext}}
 	<link rel="icon" href="/resources/favicon.ico" type="image/x-icon"/>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/angular_material/1.1.0/angular-material.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/angular_material/1.1.0/angular-material.min.js"></script>
 </head>
-<body>
+<body ng-app="BlankApp" ng-cloak>
+  <!-- Angular Material requires Angular.js Libraries -->
+  <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular.min.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-animate.min.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-aria.min.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-messages.min.js"></script>
 
-<div id="nav">
-	<div class="navbox" id="Links">
-		<div>
-			<img src="/resources/kodi_helper_logo_wide.svg" width="100%"/>
-		</div>
-		<div class="navbox_title">LINKS</div>
-		<div class="navbox_content">
-			<div>■ <a href="/">Home</a></div>
-			{{if .Links}}
-				{{range $name, $url := .Links}}
-					<div>■ <a href="{{print $url}}">{{print $name}}</a> {{$name}} {{$url}}</div>
-				{{end}}
-			{{end}}
+  <!-- Angular Material Library -->
+  <script src="http://ajax.googleapis.com/ajax/libs/angular_material/1.1.0/angular-material.min.js"></script>
+  
+  <!-- Your application bootstrap  -->
+  <script type="text/javascript">    
+    /**
+     * You must include the dependency on 'ngMaterial' 
+     */
+    angular.module('BlankApp', ['ngMaterial'])
+		.config(function($mdThemingProvider) {
+			  $mdThemingProvider.theme('default')
+					    .primaryPalette('blue')
+							.accentPalette('orange');
+		});
+  </script>
 
-			{{if .IframeLinks}}
-				{{range $name, $url := .IframeLinks}}
-					<div>■ <a href="/wrap/{{print $name}}">{{print $name}}</a></div>
-				{{end}}
-			{{end}}
-		</div>
-	{{range $viewName, $viewUrls := .ViewsMenu}}
-	{{if $viewUrls }}
-	<div class="navbox_title">{{print $viewName}}</div>
-		<div class="navbox_content">
-			{{range $name, $url := $viewUrls }}
-			<div>■ <a href="{{print $url}}">{{print $name}}</a></div>
-			{{end}}
-		</div>
-	{{end}}
-	{{end}}
-	</div>
-	{{template "navpane" .ContentContext}}
-</div>
+<section layout="row" flex>
 
-<div id="contents">
-	<!-- Errors -->
-	{{range $idx, $error := .Errors }}
-		{{if $error}}
-		<div class="errorbox">
-			<span class="errorheader">ERROR</span>
-			{{print $error}}
-		</div>
+<md-sidenav
+        class="md-sidenav-left"
+        md-component-id="left"
+        md-is-locked-open="$mdMedia('gt-md')"
+        md-whiteframe="4">
+	<img src="/resources/kodi_helper_logo_wide.svg" width="100%"/>
+	<md-button ng-href="/" class="md-primary">Home</md-button>
+<md-card>
+	<md-card-title>
+		<md-card-title-text>LINKS</md-card-title-text>
+	</md-card-title>
+	<md-card-content>
+		{{if .Links}}
+		{{range $name, $url := .Links}}
+		<md-button ng-href="{{print $url}}" class="md-primary">{{print $name}}</md-button>
 		{{end}}
-	{{end}}
+		{{end}}
 
-	<div id="section">
-	{{template "section" .ContentContext}}
+		{{if .IframeLinks}}
+		{{range $name, $url := .IframeLinks}}
+		<md-button ng-href="/wrap/{{print $name}}" class="md-primary">{{print $name}}</md-button>
+		{{end}}
+		{{end}}
+	</md-card-content>
+</md-card>
+</md-menu>
+{{template "navpane" .ContentContext}}
+</md-sidenav>
+
+<md-content flex>
+{{range $idx, $error := .Errors }}
+	{{if $error}}
+	<div class="errorbox">
+		<span class="errorheader">ERROR</span>
+		{{print $error}}
 	</div>
-</div>
+	{{end}}
+{{end}}
 
+<div id="section">
+{{template "section" .ContentContext}}
+</div>
+</md-content>
+</section>  
 </body>
 </html>
 {{end}}

@@ -1,47 +1,30 @@
 {{define "navpane"}}
 <!-- Curent Paths -->
-<div id="navbox">
-	<div class="navbox">
-		<div class="navbox_title">DISKS</div>
-		<div class="navbox_content">
+<md-card>
+	<md-card-title><md-card-title-text>DISKS</md-card-title-text></md-card-title>
+	<md-card-content flex layout="column">
 			{{range $idx, $diskStats := .DiskStats}}
-			<div class="navbox_content_section">
-				<div><span class="subtitle">Path</span>{{$diskStats.Path}}</div>
-				<div><span class="subtitle">Disk Size</span>{{$diskStats.Size}}</div>
-				<div><span class="subtitle">Empty Space</span>{{$diskStats.Avail}}</div>
-			</div>
+			<div layout="row"><div flex>Path</div><div flex=20>{{$diskStats.Path}}</div></div>
+			<div layout="row"><div flex>Disk Size</div><div flex=20>{{$diskStats.Size}}</div></div>
+			<div layout="row"><div flex>Empty Space</div><div flex=20>{{$diskStats.Avail}}</div></div>
+			 <md-divider ng-if="!$last"></md-divider>
 			{{end}}
-			<div>
-				<div><span class="subtitle">Update</span>
-					<form action="/update/disks">
-						<input type="submit" value="Update disk stats">
-					</form>
-				</div>
-			</div>
-		</div>
-	</div>
-	<div class="navbox">
-		<div class="navbox_title">QUEUE / CACHE</div>
-		<div class="navbox_content">
-			<div class="navbox_content_section">
-				<div><span class="subtitle">Q Elems</span>{{.MvBufferElems}}</div>
-				<div><span class="subtitle">Q Size</span>{{.MvBufferSize}}</div>
-			</div>
-			<div class="navbox_content_section">
-				<div><span class="subtitle">Cache Refreshed</span> {{print .CacheResfreshed}}</div>
-				<div><span class="subtitle">Update</span>
-					<form action="/update/cache">
-						<input type="submit" value="Update cache">
-					</form>
-				</div>
-			</div>
-		</div>
-	</div>
-</div>
+			<md-button ng-href="/update/disks">Update disk stats</md-button>
+	</md-card-content>
+</md-card>
+<md-card>
+	<md-card-title><md-card-title-text>QUEUE / CACHE</md-card-title-text></md-card-title>
+	<md-card-content layout="column">
+		<div layout="row"><span flex>Q Elems</span><span flex=20>{{.MvBufferElems}}</span></div>
+		<div layout="row"><span flex>Q Size</span><span flex=20>{{.MvBufferSize}}</span></div>
+		<div layout="row"><span flex>Cache Refreshed</span><span>{{print .CacheResfreshed}}</span></div>
+		<md-button ng-href="/update/cache">Update cache</md-button>
+	</md-card-content>
+</md-card>
 {{end}}
 
 {{define "section"}}
-<div>
+<md-panel>
 {{if .PathInfo }}
 {{$mts :=  .MoveTargets }}
 <script>
@@ -57,43 +40,37 @@ $('document').ready(function() {
 });
 </script>
 
-<div class="pathinfo_table">
-<table>
-  <colgroup>
-		<col style="width: 50%"><!-- Path -->
-		<col style="width: 20%" align="center"><!-- Torrent Status -->
-		<col style="width: 30%" align="center"><!-- Move Status -->
-  </colgroup>
-	<tr>
-		<th>Path</th>
-		<th>Torrent Status</th>
-		<th>Move</th>
-	</tr>
+<md-toolbar layout="row" class="md-hue-2">
+	<div class="md-toolbar-tools">
+		 <span>ACTIVE TORRENTS</span>
+	</div>
+</md-toolbar>
+<md-list flex layout="column" flex>
 	{{ range $idx, $pathInfo := .PathInfo }}
-  <tr>
+	<md-panel layout="row" flex>
 		<!-- Path Column -->
-    <td>
-			<span class="torrent_name path" id="path_{{$idx}}">▶ {{print $pathInfo.Path }}</span>
-      {{if $pathInfo.TorrentInfo }}
-			<div class="expandable" id="listing_{{$idx}}" style="display: none">
-        <ul>
-        {{ range $idx, $torrentFileInfo := $pathInfo.TorrentInfo.Files }}
-				<li><span class="path">{{print $torrentFileInfo.Name}}</span></li>
-        {{end}}
-        </ul>
-      </div>
-			<script>
-				$(function() {
-					$("#path_{{$idx}}").click(function() {
-						$("#listing_{{$idx}}").toggle("fold", {}, 500)
+			<div layout="column" flex>
+				<span class="torrent_name path" id="path_{{$idx}}">▶ {{print $pathInfo.Path }}</span>
+				{{if $pathInfo.TorrentInfo }}
+				<div class="expandable" id="listing_{{$idx}}" style="display: none">
+					<ul>
+					{{ range $idx, $torrentFileInfo := $pathInfo.TorrentInfo.Files }}
+					<li><span class="path">{{print $torrentFileInfo.Name}}</span></li>
+					{{end}}
+					</ul>
+				</div>
+				<script>
+					$(function() {
+						$("#path_{{$idx}}").click(function() {
+							$("#listing_{{$idx}}").toggle("fold", {}, 500)
+						});
 					});
-				});
-			</script>
-      {{end}}
-		</td>
+				</script>
+				{{end}}
+			</div>
 
 		<!-- Torrent Status -->
-		<td>
+		<div flex=20>
       {{if $pathInfo.TorrentInfo }}
 				{{if $pathInfo.TorrentInfo.IsFinished }}
 					<span class="torrent_state darkgreen_bold">Finished</span>
@@ -103,10 +80,10 @@ $('document').ready(function() {
 			{{else}}
 					<span class="torrent_state darkblue_bold">Missing</span>
       {{end}}
-    </td>
+		</div>
 
 		<!-- Move Form -->
-    <td>
+			<div flex=20>
 			{{if $pathInfo.MoveInfo.Moving}}
 				<span class="darkblue_bold">MOVING TO</span>
 				<span class="target path">{{print $pathInfo.MoveInfo.Target}}</span>
@@ -117,11 +94,10 @@ $('document').ready(function() {
 					  <span class="darkblue_bold">No torrent info - be careful what you move</span>
 					{{end}}
 					<form action="/move" method="post">
-						<input type="submit" value="move">
-						to
 						<input name="target" class="move_target_select">
 						<input type="hidden" name="path" value="{{print $pathInfo.Path}}">
 						<input type="hidden" name="type" value="move">
+						<input type="submit" value="move">
 					</form>
 					</div>
 				{{else}}
@@ -142,72 +118,11 @@ $('document').ready(function() {
 				<div><span class="darkred_bold">Last move error:</span> {{print $pathInfo.MoveInfo.LastError}}</div>
 				<div>{{$pathInfo.MoveInfo.LastErrorOutput}}</div>
 			{{end}}
-    </td>
-  </tr>
+			</div>
+	</md-panel>
+	<md-divider></md-divider>
   {{end}}
-</table>
-</div>
+<md-list>
 {{end}}
-
-<!-- History of paths -->
-{{if .PathInfoHistory }}
-<div class="pathinfo_table">
-<table>
-  <colgroup>
-		<col style="width: 50%"><!-- Path -->
-		<col style="width: 20%" align="center"><!-- Torrent Status -->
-		<col style="width: 30%" align="center"><!-- Move Status -->
-  </colgroup>
-	<tr>
-		<th>Path</th>
-		<th>Torrent Status</th>
-		<th>Move Target</th>
-	</tr>
-	{{ range $idx, $pathInfo := .PathInfoHistory }}
-  <tr>
-		<!-- Path Column -->
-    <td>
-			<span id="history_path_{{$idx}}" class="torrent_name path">▶ {{print $pathInfo.Path }}</span>
-      {{if $pathInfo.TorrentInfo }}
-			<div id="history_listing_{{$idx}}" style="display: none">
-        <ul>
-        {{ range $idx, $torrentFileInfo := $pathInfo.TorrentInfo.Files }}
-				<li><span class="path">{{print $torrentFileInfo.Name}}</span></li>
-        {{end}}
-        </ul>
-      </div>
-			<script>
-				$(function() {
-					$("#history_path_{{$idx}}").click(function() {
-						$("#history_listing_{{$idx}}").toggle("fold", {}, 500)
-					});
-				});
-			</script>
-      {{end}}
-		</td>
-
-		<!-- Torrent Status -->
-		<td>
-      {{if $pathInfo.TorrentInfo }}
-				{{if $pathInfo.TorrentInfo.IsFinished }}
-					<span class="torrent_state darkgreen_bold">Finished</span>
-					{{else}}
-					<span class="torrent_state darkred_bold">Not Finished</span>
-				{{end}}
-			{{else}}
-					<span class="torrent_state darkblue_bold">No Torrent Info</span>
-      {{end}}
-    </td>
-
-		<!-- Move Target -->
-		<td>
-			<span class="darkblue_bold">{{print $pathInfo.MoveInfo.Target }}</span>
-		</td>
-
-  {{end}}
-</table>
-</div>
-{{end}}
-</div>
 
 {{end}}
