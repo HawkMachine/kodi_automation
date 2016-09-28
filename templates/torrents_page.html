@@ -4,20 +4,31 @@
 	<md-card-title><md-card-title-text>DISKS</md-card-title-text></md-card-title>
 	<md-card-content flex layout="column">
 			{{range $idx, $diskStats := .DiskStats}}
-			<div layout="row"><div flex>Path</div><div flex=20>{{$diskStats.Path}}</div></div>
-			<div layout="row"><div flex>Disk Size</div><div flex=20>{{$diskStats.Size}}</div></div>
-			<div layout="row"><div flex>Empty Space</div><div flex=20>{{$diskStats.Avail}}</div></div>
+			<div layout="column">
+				<div><b>{{$diskStats.Path}}</b></div>
+				<div layout="row" layout-align="center center">
+					<span flex=40>{{$diskStats.Avail}}</span>
+					<span flex=20> free of </span>
+					<span flex=40>{{$diskStats.Size}}</span>
+				</div>
+			</div>
 			 <md-divider ng-if="!$last"></md-divider>
 			{{end}}
 			<md-button ng-href="/update/disks">Update disk stats</md-button>
 	</md-card-content>
 </md-card>
 <md-card>
-	<md-card-title><md-card-title-text>QUEUE / CACHE</md-card-title-text></md-card-title>
+	<md-card-title><md-card-title-text>STATS</md-card-title-text></md-card-title>
 	<md-card-content layout="column">
-		<div layout="row"><span flex>Q Elems</span><span flex=20>{{.MvBufferElems}}</span></div>
-		<div layout="row"><span flex>Q Size</span><span flex=20>{{.MvBufferSize}}</span></div>
-		<div layout="row"><span flex>Cache Refreshed</span><span>{{print .CacheResfreshed}}</span></div>
+		<div layout="column">
+			<span><b>Queue Elements / Size</b></span>
+			<span>{{.MvBufferElems}} / {{.MvBufferSize}}</span>
+		</div>
+		<md-divider></md-divider>
+		<div layout="column">
+			<span><b>Last Cache refresh</b></span>
+			<span>{{.CacheResfreshed}}</span>
+		</div>
 		<md-button ng-href="/update/cache">Update cache</md-button>
 	</md-card-content>
 </md-card>

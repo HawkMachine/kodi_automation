@@ -18,8 +18,8 @@
 	<link rel="icon" href="/resources/favicon.ico" type="image/x-icon"/>
 
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/angular_material/1.1.0/angular-material.min.css">
-	<script src="https://ajax.googleapis.com/ajax/libs/angular_material/1.1.0/angular-material.min.js"></script>
+  <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/angular_material/1.1.1/angular-material.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/angular_material/1.1.1/angular-material.min.js"></script>
 </head>
 <body ng-app="BlankApp" ng-cloak>
   <!-- Angular Material requires Angular.js Libraries -->
@@ -29,7 +29,7 @@
   <script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.5.5/angular-messages.min.js"></script>
 
   <!-- Angular Material Library -->
-  <script src="http://ajax.googleapis.com/ajax/libs/angular_material/1.1.0/angular-material.min.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/angular_material/1.1.1/angular-material.min.js"></script>
   
   <!-- Your application bootstrap  -->
   <script type="text/javascript">    
@@ -38,10 +38,10 @@
      */
     angular.module('BlankApp', ['ngMaterial'])
 		.config(function($mdThemingProvider) {
-			  $mdThemingProvider.theme('default')
-					    .primaryPalette('blue')
-							.accentPalette('orange');
+			  $mdThemingProvider
+				    .theme('default');
 		});
+
   </script>
 
 <section layout="row" flex>
@@ -53,25 +53,21 @@
         md-whiteframe="4">
 	<img src="/resources/kodi_helper_logo_wide.svg" width="100%"/>
 	<md-button ng-href="/" class="md-primary">Home</md-button>
-<md-card>
-	<md-card-title>
-		<md-card-title-text>LINKS</md-card-title-text>
-	</md-card-title>
-	<md-card-content>
-		{{if .Links}}
-		{{range $name, $url := .Links}}
-		<md-button ng-href="{{print $url}}" class="md-primary">{{print $name}}</md-button>
-		{{end}}
-		{{end}}
 
-		{{if .IframeLinks}}
-		{{range $name, $url := .IframeLinks}}
-		<md-button ng-href="/wrap/{{print $name}}" class="md-primary">{{print $name}}</md-button>
-		{{end}}
-		{{end}}
-	</md-card-content>
-</md-card>
-</md-menu>
+	{{if .IframeLinks}}
+	<md-divider></md-divider>
+	{{range $name, $url := .IframeLinks}}
+	<md-button ng-href="/wrap/{{print $name}}" class="md-primary">{{print $name}}</md-button>
+	{{end}}
+	{{end}}
+
+	{{if .Links}}
+	<md-divider></md-divider>
+	{{range $name, $url := .Links}}
+	<md-button ng-href="{{print $url}}" class="md-primary">{{print $name}}</md-button>
+	{{end}}
+	{{end}}
+
 {{template "navpane" .ContentContext}}
 </md-sidenav>
 

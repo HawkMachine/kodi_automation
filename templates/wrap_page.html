@@ -1,6 +1,4 @@
 {{define "section"}}
 {{if .WrapName}}<a href="{{.WrapURL}}"><h1>{{print .WrapName}}</h1></a>{{end}}
-<div>
-	<iframe src="{{.WrapURL}}"></iframe>
-</div>
+<iframe src="{{.WrapURL}}" style="height: 800px; width: 100%;"></iframe>
 {{end}}
