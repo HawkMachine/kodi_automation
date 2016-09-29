@@ -4,15 +4,18 @@
 	<md-card-title><md-card-title-text>DISKS</md-card-title-text></md-card-title>
 	<md-card-content flex layout="column">
 			{{range $idx, $diskStats := .DiskStats}}
-			<div layout="column">
-				<div><b>{{$diskStats.Path}}</b></div>
-				<div layout="row" layout-align="center center">
-					<span flex=40>{{$diskStats.Avail}}</span>
-					<span flex=20> free of </span>
-					<span flex=40>{{$diskStats.Size}}</span>
+			<div layout="column" style="padding-bottom: 10px;">
+				<div class="bold" layout="row" layout-alignment="center end">
+					<span flex>{{$diskStats.Path}}</span>
+					<span>{{$diskStats.FsType}}</span>
 				</div>
+				<div layout="row" layout-align="center center">
+					<span flex=40>{{$diskStats.Avail}} MB</span>
+					<span flex=20> free of </span>
+					<span flex=40>{{$diskStats.Size}} MB</span>
+				</div>
+				<md-progress-linear md-mode="determinate" value="{{print $diskStats.PercentFull}}"></md-progress-linear>
 			</div>
-			 <md-divider ng-if="!$last"></md-divider>
 			{{end}}
 			<md-button ng-href="/update/disks">Update disk stats</md-button>
 	</md-card-content>

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -64,10 +65,11 @@ func moveListener(s *MoveServer, ch chan MoveListenerRequest) {
 }
 
 func updateDiskStats(s *MoveServer) {
-	regex := regexp.MustCompile(`([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)%\s+(.*)`)
-	bytes, err := exec.Command("df", "-h").Output()
+	regex := regexp.MustCompile(`([^\s]+)\s+([^\s]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)%`)
+	// Results in MB
+	bytes, err := exec.Command("df", "-B", "1000000", "--output=target,fstype,size,used,avail,pcent").Output()
 	if err != nil {
-		log.Printf("df -h: %v", err)
+		log.Printf("df: %v", err)
 		s.setDiskStats(nil)
 	} else {
 		ds := []DiskStats{}
@@ -77,13 +79,30 @@ func updateDiskStats(s *MoveServer) {
 			if grs == nil {
 				continue
 			}
+			size, err := strconv.Atoi(grs[3])
+			if err != nil {
+				continue
+			}
+			used, err := strconv.Atoi(grs[4])
+			if err != nil {
+				continue
+			}
+			avail, err := strconv.Atoi(grs[5])
+			if err != nil {
+				continue
+			}
+			pFull, err := strconv.Atoi(grs[6])
+			if err != nil {
+				continue
+			}
 			if grs != nil {
 				ds = append(ds, DiskStats{
-					Path:       grs[6],
-					Filesystem: grs[1],
-					Size:       grs[2],
-					Used:       grs[3],
-					Avail:      grs[4],
+					Path:        grs[1],
+					FsType:      grs[2],
+					Size:        size,
+					Used:        used,
+					Avail:       avail,
+					PercentFull: pFull,
 				})
 			}
 		}
@@ -166,11 +185,12 @@ type PathInfo struct {
 }
 
 type DiskStats struct {
-	Path       string
-	Filesystem string
-	Size       string
-	Used       string
-	Avail      string
+	Path        string
+	Size        int
+	Used        int
+	Avail       int
+	PercentFull int
+	FsType      string
 }
 
 type MoveServer struct {
