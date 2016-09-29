@@ -1,0 +1,25 @@
+{{define "section"}}
+{{.Error}}
+<md-card>
+<md-card-title>
+<md-card-title-text class="md-headline">
+	Torrents
+</md-card-title-text>
+</md-card-title>
+<md-card-content>
+
+	<md-list>
+	{{range $s, $t := .Torrents}}
+		<md-list-item class="md-2-line">
+			<div class="md-list-item-text" layout="column">
+				<h3><b>{{print $t.Name}}</b></h3>
+				<h4>{{$t.State}} - {{$t.PercentDone}}% Done</h4>
+				<md-progress-linear md-mode="determinate" value="{{print $t.PercentDone}}"></md-progress-linear>
+			</div>
+		</md-list-item>
+		<md-divider></md-divider>
+	{{end}}
+	</md-list>
+</md-card-content>
+</md-card>
+{{end}}

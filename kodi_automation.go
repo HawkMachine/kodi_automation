@@ -15,6 +15,7 @@ import (
 	"github.com/HawkMachine/kodi_automation/server"
 	"github.com/HawkMachine/kodi_automation/views/kodiview"
 	"github.com/HawkMachine/kodi_automation/views/moveserverview"
+	"github.com/HawkMachine/kodi_automation/views/transmissionview"
 	"github.com/HawkMachine/kodi_automation/views/wrapview"
 )
 
@@ -35,6 +36,10 @@ var (
 	kodiAddress  = flag.String("kodi_address", "", "Address of kodi instance")
 	kodiUsername = flag.String("kodi_username", "", "Username of kodi user to use")
 	kodiPassword = flag.String("kodi_password", "", "Password of kodi user to use")
+
+	transmissionAddress  = flag.String("transmission_address", "", "Address of transmission.")
+	transmissionUsername = flag.String("transmission_username", "", "Username of transmission.")
+	transmissionPassword = flag.String("transmission_password", "", "Password of transmission.")
 
 	basicAuthUsername = flag.String("auth_username", "admin", "Basic auth username")
 	basicAuthPassword = flag.String("auth_password", "4dm1n", "Basic auth password")
@@ -60,6 +65,10 @@ type config struct {
 	KodiAddress  string `json:"kodi_address,omitempty"`
 	KodiUsername string `json:"kodi_username,omitempty"`
 	KodiPassword string `json:"kodi_password,omitempty"`
+
+	TransmissionAddress  string `json:"transmission_address,omitempty"`
+	TransmissionUsername string `json:"transmission_username,omitempty"`
+	TransmissionPassword string `json:"transmission_password,omitempty"`
 
 	BasicAuthUsername string `json:"basic_auth_username,omitempty"`
 	BasicAuthPassword string `json:"basic_auth_password,omitempty"`
@@ -153,6 +162,10 @@ func main() {
 			KodiAddress:  *kodiAddress,
 			KodiUsername: *kodiUsername,
 			KodiPassword: *kodiPassword,
+
+			TransmissionAddress:  *transmissionAddress,
+			TransmissionUsername: *transmissionUsername,
+			TransmissionPassword: *transmissionPassword,
 
 			Links:       links,
 			IframeLinks: iframeLinks,
@@ -264,6 +277,14 @@ func main() {
 		views = append(views, kodiview.New(cfg.KodiAddress, cfg.KodiUsername, cfg.KodiPassword, scanTargets))
 	} else {
 		log.Println("Kodi address missing. Skipping kodi stats view.")
+	}
+
+	// Transmission view
+	if cfg.TransmissionAddress != "" {
+		views = append(views, transmissionview.New(
+			cfg.TransmissionAddress,
+			cfg.TransmissionUsername,
+			cfg.TransmissionPassword))
 	}
 
 	// Run server.

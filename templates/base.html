@@ -40,7 +40,7 @@
     angular.module('BlankApp', ['ngMaterial'])
 		.config(function($mdThemingProvider) {
 			  $mdThemingProvider
-				    .theme('default');
+				    .theme('indigo');
 		});
 
   </script>
@@ -52,7 +52,12 @@
         md-component-id="left"
         md-is-locked-open="$mdMedia('gt-md')"
         md-whiteframe="4">
-	<img src="/resources/kodi_helper_logo_wide.svg" width="100%"/>
+	<!--<img src="/resources/kodi_helper_logo_wide.svg" width="100%"/>-->
+	 <md-toolbar class="md-theme-indigo">
+		 <h1 class="md-toolbar-tools">KH</h1>
+	 </md-toolbar>
+
+	<md-divider></md-divider>
 	<md-button ng-href="/" class="md-primary">Home</md-button>
 
 	{{range $viewName, $viewUrls := .ViewsMenu}}
