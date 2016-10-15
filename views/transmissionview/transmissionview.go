@@ -4,12 +4,12 @@ import (
 	"net/http"
 
 	"github.com/HawkMachine/kodi_automation/server"
-	"github.com/HawkMachine/transmission_go_remote"
+	"github.com/HawkMachine/transmission_go_api"
 )
 
 type TransmissionView struct {
-	tr       *remote.Remote
-	torrents []*remote.Torrent
+	tr       *transmission_go_api.Transmission
+	torrents []*transmission_go_api.Torrent
 }
 
 func (tv *TransmissionView) GetName() string {
@@ -41,7 +41,7 @@ func (tv *TransmissionView) transmissionPage(w http.ResponseWriter, r *http.Requ
 	var err error
 	tv.torrents, err = tv.tr.ListAll()
 	context := struct {
-		Torrents []*remote.Torrent
+		Torrents []*transmission_go_api.Torrent
 		Error    error
 	}{
 		Torrents: tv.torrents,
@@ -52,7 +52,7 @@ func (tv *TransmissionView) transmissionPage(w http.ResponseWriter, r *http.Requ
 }
 
 func New(address, username, password string) *TransmissionView {
-	r, _ := remote.New(address, username, password, "")
+	r, _ := transmission_go_api.New(address, username, password)
 	return &TransmissionView{
 		tr: r,
 	}

@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/HawkMachine/kodi_automation/transmission"
 	"github.com/HawkMachine/kodi_automation/utils/collections"
+	"github.com/HawkMachine/transmission_go_api"
 )
 
 // Returns a list of paths for all files and firectories in the source directory.
@@ -124,12 +124,14 @@ func diskStatsUpdater(s *MoveServer, d time.Duration) {
 func updateCache(s *MoveServer) {
 	log.Printf("Updating cached info.")
 
+	// List the directories in the transmission directories.
 	paths, err := directoryListing(s.sourceDir, 1, false)
 	if err != nil {
 		log.Printf("Listing source target error: %v\n", err)
 		paths = nil
 	}
 
+	// List series from the target directories to generate the suggestions.
 	var seriesListing []string
 	for seriesTarget := range s.seriesTargets {
 		sl, err := getSeriesTargetListing(seriesTarget)
@@ -140,7 +142,8 @@ func updateCache(s *MoveServer) {
 		seriesListing = append(seriesListing, sl...)
 	}
 
-	tis, err := s.transmissionCli.GetTorrents(s.sourceDir)
+	// List all torrents from Transmission.
+	tis, err := s.t.ListAll()
 	if err != nil {
 		log.Printf("Getting torrents info error: %v\n", err)
 		tis = nil
@@ -168,6 +171,12 @@ func (s *MoveServer) UpdateDiskStatsAsync() {
 	}()
 }
 
+type msgTimestamp struct {
+	Type string
+	Msg  string
+	T    time.Time
+}
+
 // PathInfo has all the information kept on Server about paths in the Download directory.
 type PathMoveInfo struct {
 	Moving          bool
@@ -176,12 +185,13 @@ type PathMoveInfo struct {
 	LastErrorOutput string
 }
 
+// Information for a
 type PathInfo struct {
-	Name        string
-	Path        string
-	AllowMove   bool
-	MoveInfo    PathMoveInfo
-	TorrentInfo transmission.TorrentInfo
+	Name      string
+	Path      string
+	AllowMove bool
+	MoveInfo  PathMoveInfo
+	Torrent   *transmission_go_api.Torrent
 }
 
 type DiskStats struct {
@@ -194,7 +204,7 @@ type DiskStats struct {
 }
 
 type MoveServer struct {
-	transmissionCli *transmission.Transmission
+	t *transmission_go_api.Transmission
 
 	// Directory to scan
 	sourceDir string
@@ -210,10 +220,14 @@ type MoveServer struct {
 	moveTargets_sorted []string
 
 	// old path info kept for history - sorted by when things were moved
-	pathInfoHistory []PathInfo
+	pathInfoHistory []*PathInfo
+
+	// Information for path that disappeared from the directory without being
+	// move with this moveserver.
+	pathInfoDisappeared []*PathInfo
 
 	// Path info is kept separately.
-	pathInfo        map[string]PathInfo
+	pathInfo        map[string]*PathInfo
 	cacheRefreshed  time.Time
 	refreshDuration time.Duration
 
@@ -223,20 +237,27 @@ type MoveServer struct {
 	// chennels
 	moveChannel chan MoveListenerRequest
 
+	// Messages
+	messages []*msgTimestamp
+
 	lock sync.Mutex
 }
 
-func New(sourceDir string, moviesTarget []string, seriesTargets []string, maxMvComands int, mvBufferSize int) (*MoveServer, error) {
+func New(sourceDir string, moviesTarget []string, seriesTargets []string,
+	maxMvComands int, mvBufferSize int,
+	address, username, password string) (*MoveServer, error) {
+	t, _ := transmission_go_api.New(address, username, password)
 	s := &MoveServer{
-		transmissionCli: transmission.New("", 0, "", ""),
+		t:               t,
 		sourceDir:       sourceDir,
 		moviesTargets:   collections.NewStringsSet(moviesTarget),
 		seriesTargets:   collections.NewStringsSet(seriesTargets),
-		pathInfoHistory: []PathInfo{},
-		pathInfo:        map[string]PathInfo{},
+		pathInfoHistory: []*PathInfo{},
+		pathInfo:        map[string]*PathInfo{},
 		refreshDuration: 5 * time.Minute,
 		cacheRefreshed:  time.Now(),
 		moveChannel:     make(chan MoveListenerRequest, mvBufferSize),
+		messages:        []*msgTimestamp{},
 		lock:            sync.Mutex{},
 	}
 
@@ -247,20 +268,6 @@ func New(sourceDir string, moviesTarget []string, seriesTargets []string, maxMvC
 	go diskStatsUpdater(s, 5*time.Minute)
 
 	return s, nil
-}
-
-func (s *MoveServer) GetPathInfo() map[string]PathInfo {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	return s.pathInfo
-}
-
-func (s *MoveServer) GetPathInfoHistory() []PathInfo {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	return s.pathInfoHistory
 }
 
 func (s *MoveServer) GetCacheRefreshed() time.Time {
@@ -277,10 +284,11 @@ func (s *MoveServer) GetMoveTargets() []string {
 	return s.moveTargets_sorted
 }
 
-func (s *MoveServer) GetPathInfoAndPathInfoHistory() (map[string]PathInfo, []PathInfo) {
+func (s *MoveServer) GetPathInfoAndPathInfoHistory() (map[string]*PathInfo, []*PathInfo) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
+	// TODO: we should create a copy here.
 	return s.pathInfo, s.pathInfoHistory
 }
 
@@ -377,9 +385,9 @@ func (s *MoveServer) SetPathMoveResult(path string, err error, output string) er
 	return nil
 }
 
-func (s *MoveServer) loadTorrentsInfo() ([]transmission.TorrentInfo, error) {
+func (s *MoveServer) loadTorrentsInfo() ([]*transmission_go_api.Torrent, error) {
 	// In the future I need more to ask both - transmission and scan local disk.
-	return s.transmissionCli.GetTorrents(s.sourceDir)
+	return s.t.ListAll()
 }
 
 func getSeriesTargetListing(seriesTarget string) ([]string, error) {
@@ -393,54 +401,81 @@ func getSeriesTargetListing(seriesTarget string) ([]string, error) {
 // setCachedInfo updates cahed infor on MoveServer. paths is a list of paths in
 // the source dir, ntis is the new transmission info, nstl is the new
 // series target listing.
-func (s *MoveServer) setCachedInfo(paths []string, ntis []transmission.TorrentInfo, nstl []string) {
+func (s *MoveServer) setCachedInfo(paths []string, ntis []*transmission_go_api.Torrent, nstl []string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	// Set new info.
+	// If any of the needed values are nil, that means there was an error. For now,
+	// we do not do anything with that data.
+	if paths == nil || ntis == nil || nstl == nil {
+		m := &msgTimestamp{
+			Type: "Set cached info",
+			T:    time.Now(),
+			Msg:  fmt.Sprintf("got nil: paths=%v, ntis=%v, nstl=%s", paths, ntis, nstl),
+		}
+		log.Printf("setCachedInfo: %v", m)
+		s.messages = append(s.messages, m)
+		return
+	}
+
 	oldPathInfo := s.pathInfo
-	newPathInfo := map[string]PathInfo{}
+
+	// Create new path info for paths that were found on disk.
+	newPathInfo := map[string]*PathInfo{}
 	for _, path := range paths {
-		newPathInfo[path] = PathInfo{
-			Name:      filepath.Base(path),
+		name := filepath.Base(path)
+		newPathInfo[name] = &PathInfo{
+			Name:      name,
 			Path:      path,
-			AllowMove: true,
+			AllowMove: false,
 			MoveInfo:  PathMoveInfo{},
 		}
 	}
-	// Copy MoveInfo and TorrentInfo from old data.
-	for _, opi := range oldPathInfo {
-		pi, ok := newPathInfo[opi.Path]
-		if ok {
-			pi.MoveInfo = opi.MoveInfo
 
-			// Copy old torrent info only if the new torrent info is nil (there was an
-			// error while getting torrents info) or that path is currently moved
-			// (torrent may have been deleted from transmission.
-			var ti transmission.TorrentInfo
-			if ntis == nil || pi.MoveInfo.Moving {
-				ti = pi.TorrentInfo
+	// Add new path info from the transmission date that was found.
+	for _, t := range ntis {
+		pi, ok := newPathInfo[t.Name]
+		if !ok {
+			newPathInfo[t.Name] = &PathInfo{
+				Name:      t.Name,
+				AllowMove: false,
+				MoveInfo:  PathMoveInfo{},
+				Torrent:   t,
 			}
-			pi.TorrentInfo = ti
-
-			newPathInfo[opi.Path] = pi
+		} else {
+			// Try to join path info from torrent info.
+			pi.Torrent = t
 		}
 	}
+
+	// Copy old move info to new data.
+	for _, opi := range oldPathInfo {
+		// TODO: keep the old move info in some sort of history.
+		if pi, ok := newPathInfo[opi.Path]; ok {
+			pi.MoveInfo = opi.MoveInfo
+		} else {
+			s.pathInfoDisappeared = append(s.pathInfoDisappeared, opi)
+		}
+	}
+
 	// Update path info with torrents info.
 	for _, nti := range ntis {
 		path := filepath.Join(nti.DownloadDir, nti.Name)
 		pi, ok := newPathInfo[path]
 		if ok {
-			pi.TorrentInfo = nti
+			pi.Torrent = nti
 			newPathInfo[path] = pi
 		}
 	}
 	// Update AllowMove
-	for _, path := range paths {
-		pi := newPathInfo[path]
-		pi.AllowMove = pi.TorrentInfo.IsFinished && !pi.MoveInfo.Moving
-		newPathInfo[path] = pi
-	}
+	//for _, path := range paths {
+	//	pi := newPathInfo[path]
+	//	// log.Printf("%v", pi)
+	//	if pi.Torrent != nil {
+	//		pi.AllowMove = pi.Torrent.IsFinished && !pi.MoveInfo.Moving
+	//	}
+	//	newPathInfo[path] = pi
+	//}
 
 	s.cacheRefreshed = time.Now()
 	s.pathInfo = newPathInfo

@@ -58,42 +58,29 @@ $('document').ready(function() {
 <md-card-content>
 <md-list flex layout="column" flex>
 	{{ range $idx, $pathInfo := .PathInfo }}
-	<md-panel layout="row" flex>
-		<!-- Path Column -->
+	<md-list-item layout="row" flex>
+	<md-panel layout="column" flex>
+		<div layout="row">
+			<!-- Path Column -->
 			<div layout="column" flex>
-				<span class="torrent_name path" id="path_{{$idx}}">▶ {{print $pathInfo.Path }}</span>
-				{{if $pathInfo.TorrentInfo }}
-				<div class="expandable" id="listing_{{$idx}}" style="display: none">
-					<ul>
-					{{ range $idx, $torrentFileInfo := $pathInfo.TorrentInfo.Files }}
-					<li><span class="path">{{print $torrentFileInfo.Name}}</span></li>
+				<span class="torrent_name path" id="path_{{$idx}}">▶ {{print $pathInfo.Name }}</span>
+				<span ng-if="$pathInfo.Path != ''">{{$pathInfo.Path}}</span>
+			</div>
+
+			<!-- Torrent Status -->
+			<div flex=10>
+				{{if $pathInfo.Torrent}}
+					{{if $pathInfo.Torrent.IsFinished }}
+						<span class="torrent_state darkgreen_bold">Finished</span>
+						{{else}}
+						<span class="torrent_state darkred_bold">{{$pathInfo.Torrent.PercentDone}}%</span>
 					{{end}}
-					</ul>
-				</div>
-				<script>
-					$(function() {
-						$("#path_{{$idx}}").click(function() {
-							$("#listing_{{$idx}}").toggle("fold", {}, 500)
-						});
-					});
-				</script>
+				{{else}}
+						<span class="torrent_state darkblue_bold">Torrent info missing</span>
 				{{end}}
 			</div>
 
-		<!-- Torrent Status -->
-		<div flex=10>
-      {{if $pathInfo.TorrentInfo }}
-				{{if $pathInfo.TorrentInfo.IsFinished }}
-					<span class="torrent_state darkgreen_bold">Finished</span>
-					{{else}}
-					<span class="torrent_state darkred_bold">Not Finished</span>
-				{{end}}
-			{{else}}
-					<span class="torrent_state darkblue_bold">Missing</span>
-      {{end}}
-		</div>
-
-		<!-- Move Form -->
+			<!-- Move Form -->
 			<div flex=30>
 			{{if $pathInfo.MoveInfo.Moving}}
 				<span class="darkblue_bold">MOVING TO</span>
@@ -101,20 +88,20 @@ $('document').ready(function() {
 			{{else}}
 				{{if $pathInfo.AllowMove}}
 					<div>
-				  {{if not $pathInfo.TorrentInfo}}
-					  <span class="darkblue_bold">No torrent info - be careful what you move</span>
-					{{end}}
-					<form action="/move" method="post">
-						<input name="target" class="move_target_select">
-						<input type="hidden" name="path" value="{{print $pathInfo.Path}}">
-						<input type="hidden" name="type" value="move">
-						<input type="submit" value="move">
-					</form>
+						{{if not $pathInfo.Torrent}}
+							<span class="darkblue_bold">No torrent info - be careful what you move</span>
+						{{end}}
+						<form action="/move" method="post">
+							<input name="target" class="move_target_select">
+							<input type="hidden" name="path" value="{{print $pathInfo.Path}}">
+							<input type="hidden" name="type" value="move">
+							<input type="submit" value="move">
+						</form>
 					</div>
 				{{else}}
 				  <div>
-				  {{if $pathInfo.TorrentInfo}}
-						{{if $pathInfo.TorrentInfo.IsFinished}}
+				  {{if $pathInfo.Torrent}}
+						{{if $pathInfo.Torrent.IsFinished}}
 							<span class="darkblue_bold">Not allowed to move path but torrent is finished. ????</span>
 						{{else}}
 							<span class="darkblue_bold">Not allowed because torrent not finished yet.</span>
@@ -125,12 +112,32 @@ $('document').ready(function() {
 					</div>
 				{{end}}
 			{{end}}
-			{{if $pathInfo.MoveInfo.LastError}}
-				<div><span class="darkred_bold">Last move error:</span> {{print $pathInfo.MoveInfo.LastError}}</div>
-				<div>{{$pathInfo.MoveInfo.LastErrorOutput}}</div>
-			{{end}}
 			</div>
+		</div>
+
+		<md-progress-linear md-mode="determinate" value="{{$pathInfo.Torrent.PercentDone}}"></md-progress-linear>
+		{{if $pathInfo.Torrent }}
+		<div class="expandable" id="listing_{{$idx}}" style="display: none">
+			<ul>
+			{{ range $idx, $torrentFileInfo := $pathInfo.Torrent.Files }}
+			<li><span class="path">{{print $torrentFileInfo.Name}}</span></li>
+			{{end}}
+			</ul>
+		</div>
+		<script>
+			$(function() {
+				$("#path_{{$idx}}").click(function() {
+					$("#listing_{{$idx}}").toggle("fold", {}, 500)
+				});
+			});
+		</script>
+		{{end}}
+		{{if $pathInfo.MoveInfo.LastError}}
+			<div><span class="darkred_bold">Last move error:</span> {{print $pathInfo.MoveInfo.LastError}}</div>
+			<div>{{$pathInfo.MoveInfo.LastErrorOutput}}</div>
+		{{end}}
 	</md-panel>
+	</md-list-item>
 	<md-divider></md-divider>
   {{end}}
 <md-list>

@@ -11,7 +11,7 @@ import (
 )
 
 // PathInfoSlice is sortable list of moveserver.PathInfo.
-type PathInfoSlice []moveserver.PathInfo
+type PathInfoSlice []*moveserver.PathInfo
 
 // Make slice of PathInfo sortable.
 func (pi PathInfoSlice) Len() int {
@@ -124,8 +124,8 @@ func (msv *MoveServerView) moveDashboardPageHandler(w http.ResponseWriter, r *ht
 
 	sort.Sort(pathInfoList)
 	context := struct {
-		PathInfo        []moveserver.PathInfo
-		PathInfoHistory []moveserver.PathInfo
+		PathInfo        []*moveserver.PathInfo
+		PathInfoHistory []*moveserver.PathInfo
 		MoveTargets     []string
 		Errors          []error
 		CacheResfreshed string
