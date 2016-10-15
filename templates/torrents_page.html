@@ -67,10 +67,21 @@ $('document').ready(function() {
 			</div>
 
 			<!-- Torrent Status -->
-			<div flex=10>
+			<div flex=10 class="torrent_state darkblue_bold">
 				{{if $pathInfo.Torrent}}
-					{{$pathInfo.Torrent.IsFinished}}
-					{{$pathInfo.Torrent.Status}}
+					{{if eq $pathInfo.Torrent.Status 0}}
+					PAUSED
+					{{else if eq $pathInfo.Torrent.Status 1}}
+					CHECK WAIT
+					{{else if eq $pathInfo.Torrent.Status 2}}
+					CHECK
+					{{else if eq $pathInfo.Torrent.Status 4}}
+					DOWNLOAD
+					{{else if eq $pathInfo.Torrent.Status 8}}
+					SEEK
+					{{else if eq $pathInfo.Torrent.Status 16}}
+					STOPPED
+					{{end}}
 				{{end}}
 			</div>
 			<!-- Torrent Percent Done -->
@@ -79,7 +90,12 @@ $('document').ready(function() {
 					{{if $pathInfo.Torrent.IsFinished }}
 						<span class="torrent_state darkgreen_bold">Finished</span>
 						{{else}}
-						<span class="torrent_state darkred_bold">{{$pathInfo.PercentDone}}%</span>
+						<div class="torrent_state darkred_bold">
+							<span> {{ printf "%.2f" $pathInfo.PercentDone }}% </span>
+							{{if $pathInfo.Torrent.DoneDate }}
+							(DONE)
+							{{end}}
+						</div>
 					{{end}}
 				{{else}}
 						<span class="torrent_state darkblue_bold">Torrent info missing</span>
@@ -107,7 +123,7 @@ $('document').ready(function() {
 				{{else}}
 				  <div>
 				  {{if $pathInfo.Torrent}}
-						{{if $pathInfo.Torrent.IsFinished}}
+						{{if $pathInfo.Torrent.DoneDate}}
 							<span class="darkblue_bold">Not allowed to move path but torrent is finished. ????</span>
 						{{else}}
 							<span class="darkblue_bold">Not allowed because torrent not finished yet.</span>
