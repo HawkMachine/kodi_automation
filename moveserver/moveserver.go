@@ -397,6 +397,7 @@ func (s *MoveServer) SetPathMoveResult(path string, err error, output string) er
 		// Successful move.
 		delete(s.pathInfo, path)
 		s.pathInfoHistory = append(s.pathInfoHistory, pi)
+		s.Log("MoveResult", fmt.Sprintf("Successfully moved %s to %s", pi.Name, pi.MoveInfo.Target))
 	} else {
 		// Unsuccessful move.
 		pi.MoveInfo.Target = ""
