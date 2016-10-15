@@ -435,17 +435,13 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*transmission_go_api.T
 
 	oldPathInfo := s.pathInfo
 
-	// TODO: currently I set AllowMove to true. I need to check the torrent state
-	// for that and also allow move if transmission doesn't know about it.
-
 	// Create new path info for paths that were found on disk.
 	newPathInfo := map[string]*PathInfo{}
 	for _, path := range paths {
 		name := filepath.Base(path)
 		newPathInfo[name] = &PathInfo{
-			Name:      name,
-			Path:      path,
-			AllowMove: true,
+			Name: name,
+			Path: path,
 		}
 	}
 
@@ -455,7 +451,6 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*transmission_go_api.T
 		if !ok {
 			newPathInfo[t.Name] = &PathInfo{
 				Name:        t.Name,
-				AllowMove:   true,
 				Torrent:     t,
 				PercentDone: t.PercentDone * 100,
 			}
@@ -477,14 +472,12 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*transmission_go_api.T
 	}
 
 	// Update AllowMove
-	//for _, path := range paths {
-	//	pi := newPathInfo[path]
-	//	// log.Printf("%v", pi)
-	//	if pi.Torrent != nil {
-	//		pi.AllowMove = pi.Torrent.IsFinished && !pi.MoveInfo.Moving
-	//	}
-	//	newPathInfo[path] = pi
-	//}
+	for _, pi := range newPathInfo {
+		pi.AllowMove = true
+		if pi.Torrent != nil {
+			pi.AllowMove = pi.Torrent.IsFinished && !pi.MoveInfo.Moving
+		}
+	}
 
 	s.cacheRefreshed = time.Now()
 	s.pathInfo = newPathInfo
