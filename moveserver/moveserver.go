@@ -341,7 +341,8 @@ func (s *MoveServer) Move(path string, to string) error {
 	defer s.lock.Unlock()
 
 	// ------------ Path verification ---------------
-	pi, ok := s.pathInfo[path]
+	name := filepath.Base(path)
+	pi, ok := s.pathInfo[name]
 	if !ok {
 		return fmt.Errorf("Requested move path %s not found in our data bank", path)
 	}
@@ -353,7 +354,6 @@ func (s *MoveServer) Move(path string, to string) error {
 	}
 	if _, err := os.Stat(path); err != nil && os.IsNotExist(err) {
 		pi.MoveInfo.LastError = err
-		s.pathInfo[path] = pi
 		return err
 	}
 
@@ -363,7 +363,6 @@ func (s *MoveServer) Move(path string, to string) error {
 	}
 	if _, err := os.Stat(to); err != nil && os.IsNotExist(err) {
 		pi.MoveInfo.LastError = err
-		s.pathInfo[path] = pi
 		return err
 	}
 
@@ -383,7 +382,6 @@ func (s *MoveServer) Move(path string, to string) error {
 			To:   target,
 		},
 	}
-	s.pathInfo[path] = pi
 	return nil
 }
 
@@ -391,7 +389,8 @@ func (s *MoveServer) SetPathMoveResult(path string, err error, output string) er
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	pi, ok := s.pathInfo[path]
+	name := filepath.Base(path)
+	pi, ok := s.pathInfo[name]
 	if !ok {
 		return fmt.Errorf("path not found")
 	}
@@ -411,7 +410,6 @@ func (s *MoveServer) SetPathMoveResult(path string, err error, output string) er
 	} else {
 		// Unsuccessful move.
 		pi.MoveInfo.Target = ""
-		s.pathInfo[path] = pi
 	}
 	return nil
 }
@@ -474,7 +472,7 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*transmission_go_api.T
 	// Copy old move info to new data.
 	for _, opi := range oldPathInfo {
 		// TODO: keep the old move info in some sort of history.
-		if pi, ok := newPathInfo[opi.Path]; ok {
+		if pi, ok := newPathInfo[opi.Name]; ok {
 			pi.MoveInfo = opi.MoveInfo
 		} else {
 			s.pathInfoDisappeared = append(s.pathInfoDisappeared, opi)
