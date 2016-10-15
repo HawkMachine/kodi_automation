@@ -9,10 +9,10 @@
 					<span flex>{{$diskStats.Path}}</span>
 					<span>{{$diskStats.FsType}}</span>
 				</div>
-				<div layout="row" layout-align="center center">
-					<span flex=40>{{$diskStats.Avail}} MB</span>
-					<span flex=20> free of </span>
-					<span flex=40>{{$diskStats.Size}} MB</span>
+				<div layout="row">
+					<span flex=40>{{sizeformat $diskStats.Avail}}</span>
+					<span flex> free of </span>
+					<span flex=40 class="text-align: right">{{sizeformat $diskStats.Size}}</span>
 				</div>
 				<md-progress-linear md-mode="determinate" value="{{print $diskStats.PercentFull}}"></md-progress-linear>
 			</div>
@@ -65,9 +65,16 @@ $('document').ready(function() {
 			<div layout="column" flex>
 				<span class="torrent_name path" id="path_{{$idx}}">▶ {{print $pathInfo.Name }}</span>
 			</div>
+			
+			<div flex="10" layout="row" style="text-align: right">
+				{{if $pathInfo.Torrent}}
+				<span flex=50 class="darkgreen_bold">{{sizeformat $pathInfo.Torrent.RateDownload}}&#8615;</span>
+				<span flex=50 class="darkred_bold">{{sizeformat $pathInfo.Torrent.RateUpload}}&#8613;</span>
+				{{end}}
+			</div>
 
 			<!-- Torrent Status -->
-			<div flex=10 class="torrent_state darkblue_bold">
+			<div flex=10 class="torrent_state darkblue_bold" style="text-align: right">
 				{{if $pathInfo.Torrent}}
 					{{if eq $pathInfo.Torrent.Status 0}}
 					PAUSED
@@ -85,12 +92,12 @@ $('document').ready(function() {
 				{{end}}
 			</div>
 			<!-- Torrent Percent Done -->
-			<div flex=10>
+			<div flex=10 style="text-align: right">
 				{{if $pathInfo.Torrent}}
 					{{if $pathInfo.Torrent.IsFinished }}
 						<span class="torrent_state darkgreen_bold">Finished</span>
 						{{else}}
-						<div class="torrent_state darkred_bold">
+						<div class="torrent_state darkgreen_bold">
 							<span> {{ printf "%.2f" $pathInfo.PercentDone }}% </span>
 							{{if $pathInfo.Torrent.DoneDate }}
 							(DONE)
@@ -103,7 +110,7 @@ $('document').ready(function() {
 			</div>
 
 			<!-- Move Form -->
-			<div flex=30>
+			<div flex=25 style="text-align: right">
 			{{if $pathInfo.MoveInfo.Moving}}
 				<span class="darkblue_bold">MOVING TO</span>
 				<span class="target path">{{print $pathInfo.MoveInfo.Target}}</span>
@@ -140,7 +147,24 @@ $('document').ready(function() {
 		<!-- Progress bar -->
 		<md-progress-linear md-mode="determinate" value="{{$pathInfo.PercentDone}}"></md-progress-linear>
 		{{if $pathInfo.Torrent }}
-		<div class="expandable" id="listing_{{$idx}}" layout="column" style="display: none;">
+		<div class="expandable" id="listing_{{$idx}}" layout="column" style="display: none;" layout="column">
+			<div layout="row">
+				<div flex="33" layout="column">
+					<div layout="row">
+						<span flex=75 class="darkblue_bold">Size</span>
+						<span flex class="darkred_bold">{{sizeformat $pathInfo.Torrent.TotalSize}}</span>
+					</div>
+					<div flex="33" layout="row">
+						<span flex=75 class="darkblue_bold">Downloaded</span>
+						<span flex class="darkred_bold">{{sizeformat $pathInfo.Torrent.DownloadedEver}}</span>
+					</div>
+				</div>
+				<div flex="33" layout="row">
+				</div>
+			</div>
+			<div>
+				{{ printf "%#v" $pathInfo.Torrent }}
+			</div>
 			{{if $pathInfo.Torrent.Files }}
 			<ul>
 				{{ range $idx, $torrentFileInfo := $pathInfo.Torrent.Files }}

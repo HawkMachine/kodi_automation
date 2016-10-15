@@ -232,6 +232,16 @@ func NewMyHTTPServer(port int, basicAuthUsername string, basicAuthPassword strin
 				}
 				return v.Format(f)
 			},
+			"sizeformat": func(size int64) string {
+				if size < 1000 {
+					return fmt.Sprintf("%dB", size)
+				} else if size < 1000000 {
+					return fmt.Sprintf("%.2fKB", float64(size)/1000.0)
+				} else if size < 10^9 {
+					return fmt.Sprintf("%.2fMB", float64(size)/1000000.0)
+				}
+				return fmt.Sprintf("%.2fGB", float64(size)/1000000000.0)
+			},
 		},
 	}
 	return httpServer

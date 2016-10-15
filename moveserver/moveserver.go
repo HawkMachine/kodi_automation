@@ -67,7 +67,7 @@ func moveListener(s *MoveServer, ch chan MoveListenerRequest) {
 func updateDiskStats(s *MoveServer) {
 	regex := regexp.MustCompile(`([^\s]+)\s+([^\s]+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)%`)
 	// Results in MB
-	bytes, err := exec.Command("df", "-B", "1000000", "--output=target,fstype,size,used,avail,pcent").Output()
+	bytes, err := exec.Command("df", "-B", "1", "--output=target,fstype,size,used,avail,pcent").Output()
 	if err != nil {
 		log.Printf("df: %v", err)
 		s.setDiskStats(nil)
@@ -79,15 +79,15 @@ func updateDiskStats(s *MoveServer) {
 			if grs == nil {
 				continue
 			}
-			size, err := strconv.Atoi(grs[3])
+			size, err := strconv.ParseInt(grs[3], 10, 64)
 			if err != nil {
 				continue
 			}
-			used, err := strconv.Atoi(grs[4])
+			used, err := strconv.ParseInt(grs[4], 10, 64)
 			if err != nil {
 				continue
 			}
-			avail, err := strconv.Atoi(grs[5])
+			avail, err := strconv.ParseInt(grs[5], 10, 64)
 			if err != nil {
 				continue
 			}
@@ -199,9 +199,9 @@ type PathInfo struct {
 
 type DiskStats struct {
 	Path        string
-	Size        int
-	Used        int
-	Avail       int
+	Size        int64
+	Used        int64
+	Avail       int64
 	PercentFull int
 	FsType      string
 }
