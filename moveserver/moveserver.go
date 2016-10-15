@@ -124,11 +124,11 @@ func diskStatsUpdater(s *MoveServer, d time.Duration) {
 func updateCache(s *MoveServer) {
 	log.Printf("Updating cached info.")
 
-	// List the directories in the transmission directories.
-	paths, err := directoryListing(s.sourceDir, 1, false)
+	// List the files in the transmission directory.
+	tranmissionLst, err := directoryListing(s.sourceDir, 1, false)
 	if err != nil {
 		log.Printf("Listing source target error: %v\n", err)
-		paths = nil
+		tranmissionLst = nil
 	}
 
 	// List series from the target directories to generate the suggestions.
@@ -149,7 +149,7 @@ func updateCache(s *MoveServer) {
 		tis = nil
 	}
 
-	s.setCachedInfo(paths, tis, seriesListing)
+	s.setCachedInfo(tranmissionLst, tis, seriesListing)
 }
 
 func cacheUpdater(s *MoveServer, d time.Duration) {
@@ -171,6 +171,7 @@ func (s *MoveServer) UpdateDiskStatsAsync() {
 	}()
 }
 
+// msgTimestamp encapsulates message with a type and time.
 type msgTimestamp struct {
 	Type string
 	Msg  string
@@ -185,13 +186,14 @@ type PathMoveInfo struct {
 	LastErrorOutput string
 }
 
-// Information for a
+// Information about tranmission files.
 type PathInfo struct {
 	Name      string
-	Path      string
+	Path      string // Present if found on disk.
 	AllowMove bool
 	MoveInfo  PathMoveInfo
-	Torrent   *transmission_go_api.Torrent
+	Torrent   *transmission_go_api.Torrent // Present if found in torrent.
+	// TODO: add field for files found on disk.
 }
 
 type DiskStats struct {
@@ -405,8 +407,8 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*transmission_go_api.T
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	// If any of the needed values are nil, that means there was an error. For now,
-	// we do not do anything with that data.
+	// If any of the needed values are nil, that means there was an error. For
+	// now, we do not do anything with that data.
 	if paths == nil || ntis == nil || nstl == nil {
 		m := &msgTimestamp{
 			Type: "Set cached info",
@@ -420,6 +422,9 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*transmission_go_api.T
 
 	oldPathInfo := s.pathInfo
 
+	// TODO: currently I set AllowMove to true. I need to check the torrent state
+	// for that and also allow move if transmission doesn't know about it.
+
 	// Create new path info for paths that were found on disk.
 	newPathInfo := map[string]*PathInfo{}
 	for _, path := range paths {
@@ -427,19 +432,17 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*transmission_go_api.T
 		newPathInfo[name] = &PathInfo{
 			Name:      name,
 			Path:      path,
-			AllowMove: false,
-			MoveInfo:  PathMoveInfo{},
+			AllowMove: true,
 		}
 	}
 
-	// Add new path info from the transmission date that was found.
+	// Add new path info from the transmission data that was found.
 	for _, t := range ntis {
 		pi, ok := newPathInfo[t.Name]
 		if !ok {
 			newPathInfo[t.Name] = &PathInfo{
 				Name:      t.Name,
-				AllowMove: false,
-				MoveInfo:  PathMoveInfo{},
+				AllowMove: true,
 				Torrent:   t,
 			}
 		} else {
@@ -458,15 +461,6 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*transmission_go_api.T
 		}
 	}
 
-	// Update path info with torrents info.
-	for _, nti := range ntis {
-		path := filepath.Join(nti.DownloadDir, nti.Name)
-		pi, ok := newPathInfo[path]
-		if ok {
-			pi.Torrent = nti
-			newPathInfo[path] = pi
-		}
-	}
 	// Update AllowMove
 	//for _, path := range paths {
 	//	pi := newPathInfo[path]
