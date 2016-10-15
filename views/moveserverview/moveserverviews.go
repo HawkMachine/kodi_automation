@@ -122,6 +122,9 @@ func (msv *MoveServerView) moveDashboardPageHandler(w http.ResponseWriter, r *ht
 
 	formattedCacheRefreshed := msv.moveServer.GetCacheRefreshed().Format("15:04:05 02-01-2006")
 
+	messages := msv.moveServer.GetMessages()
+	log.Printf("messages %s", messages)
+
 	sort.Sort(pathInfoList)
 	context := struct {
 		PathInfo        []*moveserver.PathInfo
@@ -132,6 +135,7 @@ func (msv *MoveServerView) moveDashboardPageHandler(w http.ResponseWriter, r *ht
 		MvBufferSize    int
 		MvBufferElems   int
 		DiskStats       []moveserver.DiskStats
+		Messages        []*moveserver.LogMessage
 	}{
 		PathInfo:        pathInfoList,
 		PathInfoHistory: pathInfoHistoryList,
@@ -140,6 +144,7 @@ func (msv *MoveServerView) moveDashboardPageHandler(w http.ResponseWriter, r *ht
 		MvBufferSize:    mvBuffSize,
 		MvBufferElems:   mvBuffElems,
 		DiskStats:       msv.moveServer.GetDiskStats(),
+		Messages:        messages,
 	}
 	s.RenderTemplate(w, r, msv.GetName(), "torrents_page", "Torrents", context)
 }

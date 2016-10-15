@@ -73,7 +73,7 @@ $('document').ready(function() {
 					{{if $pathInfo.Torrent.IsFinished }}
 						<span class="torrent_state darkgreen_bold">Finished</span>
 						{{else}}
-						<span class="torrent_state darkred_bold">{{$pathInfo.Torrent.PercentDone}}%</span>
+						<span class="torrent_state darkred_bold">{{$pathInfo.PercentDone}}%</span>
 					{{end}}
 				{{else}}
 						<span class="torrent_state darkblue_bold">Torrent info missing</span>
@@ -115,7 +115,7 @@ $('document').ready(function() {
 			</div>
 		</div>
 
-		<md-progress-linear md-mode="determinate" value="{{$pathInfo.Torrent.PercentDone}}"></md-progress-linear>
+		<md-progress-linear md-mode="determinate" value="{{$pathInfo.PercentDone}}"></md-progress-linear>
 		{{if $pathInfo.Torrent }}
 		<div class="expandable" id="listing_{{$idx}}" style="display: none">
 			<ul>
@@ -143,6 +143,19 @@ $('document').ready(function() {
 <md-list>
 </md-card-content>
 </md-card>
+
+<md-card>
+<md-card-content layout="column">
+{{ range $idx, $m := .Messages }}
+<div layout="row">
+	<span flex="10">{{timeformat $m.T "" }}</span>
+	<span flex="10">{{$m.Type}}</span>
+	<span flex>{{$m.Msg}}</span>
+</div>
+{{end}}
+</md-card-content>
+</md-card>
+
 {{end}}
 
 {{end}}

@@ -171,8 +171,8 @@ func (s *MoveServer) UpdateDiskStatsAsync() {
 	}()
 }
 
-// msgTimestamp encapsulates message with a type and time.
-type msgTimestamp struct {
+// LogMessage encapsulates message with a type and time.
+type LogMessage struct {
 	Type string
 	Msg  string
 	T    time.Time
@@ -188,11 +188,12 @@ type PathMoveInfo struct {
 
 // Information about tranmission files.
 type PathInfo struct {
-	Name      string
-	Path      string // Present if found on disk.
-	AllowMove bool
-	MoveInfo  PathMoveInfo
-	Torrent   *transmission_go_api.Torrent // Present if found in torrent.
+	Name        string
+	Path        string // Present if found on disk.
+	AllowMove   bool
+	MoveInfo    PathMoveInfo
+	Torrent     *transmission_go_api.Torrent // Present if found in torrent.
+	PercentDone float64
 	// TODO: add field for files found on disk.
 }
 
@@ -240,7 +241,7 @@ type MoveServer struct {
 	moveChannel chan MoveListenerRequest
 
 	// Messages
-	messages []*msgTimestamp
+	messages []*LogMessage
 
 	lock sync.Mutex
 }
@@ -259,7 +260,7 @@ func New(sourceDir string, moviesTarget []string, seriesTargets []string,
 		refreshDuration: 5 * time.Minute,
 		cacheRefreshed:  time.Now(),
 		moveChannel:     make(chan MoveListenerRequest, mvBufferSize),
-		messages:        []*msgTimestamp{},
+		messages:        []*LogMessage{},
 		lock:            sync.Mutex{},
 	}
 
@@ -306,6 +307,23 @@ func (s *MoveServer) GetDiskStats() []DiskStats {
 	defer s.lock.Unlock()
 
 	return s.diskStats
+}
+
+func (s *MoveServer) GetMessages() []*LogMessage {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	return s.messages
+}
+
+func (s *MoveServer) Log(tp, msg string) {
+	m := &LogMessage{
+		Type: tp,
+		T:    time.Now(),
+		Msg:  msg,
+	}
+	log.Printf("%s: %s", tp, msg)
+	s.messages = append([]*LogMessage{m}, s.messages...)
 }
 
 func (s *MoveServer) Move(path string, to string) error {
@@ -410,13 +428,7 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*transmission_go_api.T
 	// If any of the needed values are nil, that means there was an error. For
 	// now, we do not do anything with that data.
 	if paths == nil || ntis == nil || nstl == nil {
-		m := &msgTimestamp{
-			Type: "Set cached info",
-			T:    time.Now(),
-			Msg:  fmt.Sprintf("got nil: paths=%v, ntis=%v, nstl=%s", paths, ntis, nstl),
-		}
-		log.Printf("setCachedInfo: %v", m)
-		s.messages = append(s.messages, m)
+		s.Log("SetCachedInfo", fmt.Sprintf("got nil: paths=%v, ntis=%v, nstl=%s", paths, ntis, nstl))
 		return
 	}
 
@@ -441,13 +453,15 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*transmission_go_api.T
 		pi, ok := newPathInfo[t.Name]
 		if !ok {
 			newPathInfo[t.Name] = &PathInfo{
-				Name:      t.Name,
-				AllowMove: true,
-				Torrent:   t,
+				Name:        t.Name,
+				AllowMove:   true,
+				Torrent:     t,
+				PercentDone: t.PercentDone * 100,
 			}
 		} else {
 			// Try to join path info from torrent info.
 			pi.Torrent = t
+			pi.PercentDone = t.PercentDone * 100
 		}
 	}
 
@@ -496,6 +510,8 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*transmission_go_api.T
 
 	s.moveTargets_sorted = moveTargets_sorted
 	s.moveTargets = moveTargets
+
+	s.Log("SetCachedInfo", fmt.Sprintf("Successfully updated cached info."))
 }
 
 func (s *MoveServer) setDiskStats(nds []DiskStats) {

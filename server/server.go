@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/HawkMachine/kodi_automation/server/auth"
 )
@@ -80,6 +81,8 @@ type MyHTTPServer struct {
 
 	basicAuthUsername string
 	basicAuthPassword string
+
+	templateFuncs template.FuncMap
 }
 
 func (s *MyHTTPServer) RenderTemplate(w http.ResponseWriter, r *http.Request, viewName, templateName string, title string, context interface{}) {
@@ -137,7 +140,7 @@ func (s *MyHTTPServer) RegisterView(v View) error {
 		for _, relPath := range relPaths {
 			paths = append(paths, filepath.Join(s.templatesPath, relPath))
 		}
-		t := template.Must(template.New(name).ParseFiles(paths...))
+		t := template.Must(template.New(name).Funcs(s.templateFuncs).ParseFiles(paths...))
 		viewTemplates[name] = t
 	}
 	s.parsedTemplates[v.GetName()] = viewTemplates
@@ -221,6 +224,15 @@ func NewMyHTTPServer(port int, basicAuthUsername string, basicAuthPassword strin
 
 		basicAuthUsername: basicAuthUsername,
 		basicAuthPassword: basicAuthPassword,
+
+		templateFuncs: template.FuncMap{
+			"timeformat": func(v time.Time, f string) string {
+				if f == "" {
+					f = "Mon Jan 2 15:04"
+				}
+				return v.Format(f)
+			},
+		},
 	}
 	return httpServer
 }
