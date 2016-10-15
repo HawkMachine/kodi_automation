@@ -18,7 +18,7 @@ func (pi PathInfoSlice) Len() int {
 	return len(pi)
 }
 func (pi PathInfoSlice) Less(i, j int) bool {
-	return pi[i].Path < pi[j].Path
+	return pi[i].Name < pi[j].Name
 }
 func (pi PathInfoSlice) Swap(i, j int) {
 	pi[i], pi[j] = pi[j], pi[i]

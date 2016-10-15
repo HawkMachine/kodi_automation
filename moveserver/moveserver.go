@@ -244,6 +244,8 @@ type MoveServer struct {
 	messages []*LogMessage
 
 	lock sync.Mutex
+
+	assistant *Assistant
 }
 
 func New(sourceDir string, moviesTarget []string, seriesTargets []string,
@@ -263,12 +265,20 @@ func New(sourceDir string, moviesTarget []string, seriesTargets []string,
 		messages:        []*LogMessage{},
 		lock:            sync.Mutex{},
 	}
+	a := &Assistant{
+		msv: s,
+		maxConcurrentTorrents: 5,
+		dryRun:                true,
+		moveTarget:            "/tmp/moveTarget",
+	}
+	s.assistant = a
 
 	for i := 0; i < maxMvComands; i++ {
 		go moveListener(s, s.moveChannel)
 	}
 	go cacheUpdater(s, 5*time.Minute)
 	go diskStatsUpdater(s, 5*time.Minute)
+	go s.assistant.run()
 
 	return s, nil
 }

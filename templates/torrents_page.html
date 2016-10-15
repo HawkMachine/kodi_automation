@@ -69,6 +69,13 @@ $('document').ready(function() {
 			<!-- Torrent Status -->
 			<div flex=10>
 				{{if $pathInfo.Torrent}}
+					{{$pathInfo.Torrent.IsFinished}}
+					{{$pathInfo.Torrent.Status}}
+				{{end}}
+			</div>
+			<!-- Torrent Percent Done -->
+			<div flex=10>
+				{{if $pathInfo.Torrent}}
 					{{if $pathInfo.Torrent.IsFinished }}
 						<span class="torrent_state darkgreen_bold">Finished</span>
 						{{else}}
@@ -117,22 +124,22 @@ $('document').ready(function() {
 		<!-- Progress bar -->
 		<md-progress-linear md-mode="determinate" value="{{$pathInfo.PercentDone}}"></md-progress-linear>
 		{{if $pathInfo.Torrent }}
-		{{if $pathInfo.Torrent.Files }}
-		<div class="expandable" id="listing_{{$idx}}" style="display: none">
+		<div class="expandable" id="listing_{{$idx}}" layout="column" style="display: none;">
+			{{if $pathInfo.Torrent.Files }}
 			<ul>
-			{{ range $idx, $torrentFileInfo := $pathInfo.Torrent.Files }}
-			<li> <span class="path" flex>{{print $torrentFileInfo.Name}}</span> </li>
-			{{end}}
+				{{ range $idx, $torrentFileInfo := $pathInfo.Torrent.Files }}
+				<li> <span class="path" flex>{{print $torrentFileInfo.Name}}</span> </li>
+				{{end}}
 			</ul>
-		</div>
-		<script>
-			$(function() {
-				$("#path_{{$idx}}").click(function() {
-					$("#listing_{{$idx}}").toggle("fold", {}, 500)
+			<script>
+				$(function() {
+					$("#path_{{$idx}}").click(function() {
+						$("#listing_{{$idx}}").toggle("fold", {}, 500)
+					});
 				});
-			});
-		</script>
-		{{end}}
+			</script>
+			{{end}}
+		</div>
 		{{end}}
 
 		<!-- Last move info error-->
