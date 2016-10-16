@@ -92,7 +92,7 @@ $('document').ready(function() {
 				{{end}}
 			</div>
 			<!-- Torrent Percent Done -->
-			<div flex=10 style="text-align: right">
+			<div flex=5 style="text-align: right">
 				{{if $pathInfo.Torrent}}
 					{{if $pathInfo.Torrent.IsFinished }}
 						<span class="torrent_state darkgreen_bold">Finished</span>
@@ -161,9 +161,6 @@ $('document').ready(function() {
 				</div>
 				<div flex="33" layout="row">
 				</div>
-			</div>
-			<div>
-				{{ printf "%#v" $pathInfo.Torrent }}
 			</div>
 			{{if $pathInfo.Torrent.Files }}
 			<ul>

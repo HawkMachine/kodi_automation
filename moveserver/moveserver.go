@@ -149,6 +149,8 @@ func updateCache(s *MoveServer) {
 		tis = nil
 	}
 
+	// Get transmission info.
+
 	s.setCachedInfo(tranmissionLst, tis, seriesListing)
 }
 
@@ -243,13 +245,14 @@ type MoveServer struct {
 	// Messages
 	messages []*LogMessage
 
-	lock sync.Mutex
+	lock         sync.Mutex
+	messagesLock sync.Mutex
 
 	assistant *Assistant
 }
 
 func New(sourceDir string, moviesTarget []string, seriesTargets []string,
-	maxMvComands int, mvBufferSize int,
+	maxMvComands int, mvBufferSize int, assistantTarget string,
 	address, username, password string) (*MoveServer, error) {
 	t, _ := transmission_go_api.New(address, username, password)
 	s := &MoveServer{
@@ -264,21 +267,27 @@ func New(sourceDir string, moviesTarget []string, seriesTargets []string,
 		moveChannel:     make(chan MoveListenerRequest, mvBufferSize),
 		messages:        []*LogMessage{},
 		lock:            sync.Mutex{},
+		messagesLock:    sync.Mutex{},
 	}
-	a := &Assistant{
-		msv: s,
-		maxConcurrentTorrents: 5,
-		dryRun:                true,
-		moveTarget:            "/tmp/moveTarget",
+	if assistantTarget != "" {
+		a := &Assistant{
+			msv: s,
+			maxConcurrentTorrents: 5,
+			maxConcurrentMoving:   1,
+			dryRun:                true,
+			moveTarget:            assistantTarget,
+		}
+		s.assistant = a
 	}
-	s.assistant = a
 
 	for i := 0; i < maxMvComands; i++ {
 		go moveListener(s, s.moveChannel)
 	}
 	go cacheUpdater(s, 5*time.Minute)
 	go diskStatsUpdater(s, 5*time.Minute)
-	go s.assistant.run()
+	if s.assistant != nil {
+		go s.assistant.run()
+	}
 
 	return s, nil
 }
@@ -320,19 +329,25 @@ func (s *MoveServer) GetDiskStats() []DiskStats {
 }
 
 func (s *MoveServer) GetMessages() []*LogMessage {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+	s.messagesLock.Lock()
+	defer s.messagesLock.Unlock()
 
 	return s.messages
 }
 
 func (s *MoveServer) Log(tp, msg string) {
+	s.messagesLock.Lock()
+	defer s.messagesLock.Unlock()
+
 	m := &LogMessage{
 		Type: tp,
 		T:    time.Now(),
 		Msg:  msg,
 	}
 	log.Printf("%s: %s", tp, msg)
+	if len(s.messages) >= 5000 {
+		s.messages = s.messages[:5000]
+	}
 	s.messages = append([]*LogMessage{m}, s.messages...)
 }
 
@@ -346,20 +361,27 @@ func (s *MoveServer) Move(path string, to string) error {
 	if !ok {
 		return fmt.Errorf("Requested move path %s not found in our data bank", path)
 	}
-	if filepath.Dir(path) != s.sourceDir {
-		return fmt.Errorf("Trying to move file outside of %s", s.sourceDir)
+	if pi.Path != path {
+		return fmt.Errorf("Internal error, found item path is different thatn requested path.")
+	}
+	return s.moveLocked(pi, to)
+}
+
+func (s *MoveServer) moveLocked(pi *PathInfo, to string) error {
+	if filepath.Dir(pi.Path) != s.sourceDir {
+		return fmt.Errorf("Trying to move path %s outside of %s", pi.Path, s.sourceDir)
 	}
 	if pi.MoveInfo.Moving {
 		return fmt.Errorf("Requested move path %s is currently in move to %s", pi.MoveInfo.Target)
 	}
-	if _, err := os.Stat(path); err != nil && os.IsNotExist(err) {
+	if _, err := os.Stat(pi.Path); err != nil && os.IsNotExist(err) {
 		pi.MoveInfo.LastError = err
 		return err
 	}
 
 	// Target path verification
 	if !s.moveTargets[to] {
-		return fmt.Errorf("Requested target unrecognized")
+		return fmt.Errorf("Requested move target %s not on move targets list")
 	}
 	if _, err := os.Stat(to); err != nil && os.IsNotExist(err) {
 		pi.MoveInfo.LastError = err
@@ -372,13 +394,13 @@ func (s *MoveServer) Move(path string, to string) error {
 	}
 
 	// Actually making a move.
-	target := filepath.Join(to, filepath.Base(path))
+	target := filepath.Join(to, filepath.Base(pi.Path))
 	pi.MoveInfo.Moving = true
 	pi.MoveInfo.Target = target
 
 	s.moveChannel <- MoveListenerRequest{
 		Request: MoveRequest{
-			Path: path,
+			Path: pi.Path,
 			To:   target,
 		},
 	}
@@ -483,7 +505,7 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*transmission_go_api.T
 	for _, pi := range newPathInfo {
 		pi.AllowMove = true
 		if pi.Torrent != nil {
-			pi.AllowMove = pi.Torrent.IsFinished && !pi.MoveInfo.Moving
+			pi.AllowMove = pi.Torrent.PercentDone == 1.0 && !pi.MoveInfo.Moving
 		}
 	}
 

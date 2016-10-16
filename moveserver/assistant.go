@@ -24,6 +24,7 @@ type Assistant struct {
 	dryRun                bool
 	moveTarget            string
 	maxConcurrentTorrents int
+	maxConcurrentMoving   int
 }
 
 func (a *Assistant) Log(tp, msg string) {
@@ -31,9 +32,10 @@ func (a *Assistant) Log(tp, msg string) {
 }
 
 func (a *Assistant) run() {
-	if a.sleep < 5*time.Minute {
-		a.sleep = 5 * time.Minute
+	if a.sleep < 1*time.Minute {
+		a.sleep = 1 * time.Minute
 	}
+	// a.sleep = 15 * time.Second
 	a.pause = false
 	for !a.pause {
 		err := a.assist()
@@ -54,7 +56,7 @@ func (a *Assistant) assist() error {
 	// here on a cron job that automatically pauses finished torrents.
 	pis := a.msv.pathInfo
 	toMove := filterPathInfo(pis, func(pi *PathInfo) bool {
-		return pi.AllowMove && !pi.MoveInfo.Moving && pi.MoveInfo.LastError != nil && pi.Torrent != nil && pi.Torrent.DoneDate != 0 && pi.Torrent.Status == tr.TR_STATUS_PAUSED
+		return pi.AllowMove && !pi.MoveInfo.Moving && pi.Path != "" && pi.MoveInfo.LastError == nil && pi.Torrent != nil && pi.Torrent.DoneDate != 0 && pi.Torrent.PercentDone == 1.0 && pi.Torrent.Status == tr.TR_STATUS_PAUSED
 	})
 	todo := filterPathInfo(pis, func(pi *PathInfo) bool {
 		return pi.Torrent != nil && pi.Torrent.Status == tr.TR_STATUS_PAUSED && pi.Torrent.DoneDate == 0
@@ -62,12 +64,27 @@ func (a *Assistant) assist() error {
 	downloading := filterPathInfo(pis, func(pi *PathInfo) bool {
 		return pi.Torrent != nil && pi.Torrent.Status != tr.TR_STATUS_PAUSED
 	})
+	moving := filterPathInfo(pis, func(pi *PathInfo) bool {
+		return pi.MoveInfo.Moving
+	})
 
+	toMoveSelected := []*PathInfo{}
 	for _, pi := range toMove {
-		a.Log("assist", fmt.Sprintf("Would like to move %s to %s", pi.Name, a.moveTarget))
+		if len(toMoveSelected)+len(moving) >= a.maxConcurrentMoving {
+			break
+		}
+		toMoveSelected = append(toMoveSelected, pi)
 	}
 
-	if len(downloading) > 0 {
+	for _, pi := range toMoveSelected {
+		a.Log("assist", fmt.Sprintf("Moving %s to %s", pi.Name, a.moveTarget))
+		err := a.msv.moveLocked(pi, a.moveTarget)
+		if err != nil {
+			a.Log("assist", fmt.Sprintf("error %s", err))
+		}
+	}
+
+	if len(todo) > 0 {
 		if len(downloading) > a.maxConcurrentTorrents {
 			a.Log("assist", fmt.Sprintf("Downloading %d, max concurrent downloads = %d, cannot download more", len(downloading), a.maxConcurrentTorrents))
 		} else {

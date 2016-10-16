@@ -48,10 +48,11 @@ var (
 )
 
 type config struct {
-	Port          int      `json:"port,omitempty"`
-	SourceDir     string   `json:"source_dir,omitempty"`
-	MoviesTargets []string `json:"movies_targets,omitempty"`
-	SeriesTargets []string `json:"series_targets,omitempty"`
+	Port            int      `json:"port,omitempty"`
+	SourceDir       string   `json:"source_dir,omitempty"`
+	MoviesTargets   []string `json:"movies_targets,omitempty"`
+	SeriesTargets   []string `json:"series_targets,omitempty"`
+	AssistantTarget string   `json:"assistant_target,omitempty"`
 
 	MvBufferSize  int `json:"mv_buffer_size,omitempty"`
 	MaxMvCommands int `json:"max_mv_commands,omitempty"`
@@ -254,6 +255,7 @@ func main() {
 	// Initialize move server view.
 	moveServer, err := moveserver.New(
 		cfg.SourceDir, cfg.MoviesTargets, cfg.SeriesTargets, cfg.MaxMvCommands, cfg.MvBufferSize,
+		cfg.AssistantTarget,
 		cfg.TransmissionAddress,
 		cfg.TransmissionUsername,
 		cfg.TransmissionPassword)
