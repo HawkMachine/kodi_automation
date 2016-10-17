@@ -69,7 +69,7 @@ func updateDiskStats(s *MoveServer) {
 	// Results in MB
 	bytes, err := exec.Command("df", "-B", "1", "--output=target,fstype,size,used,avail,pcent").Output()
 	if err != nil {
-		log.Printf("df: %v", err)
+		s.Log("UpdateDiskStats", fmt.Sprintf("df failed: %v", err))
 		s.setDiskStats(nil)
 	} else {
 		ds := []DiskStats{}
@@ -127,7 +127,7 @@ func updateCache(s *MoveServer) {
 	// List the files in the transmission directory.
 	tranmissionLst, err := directoryListing(s.sourceDir, 1, false)
 	if err != nil {
-		log.Printf("Listing source target error: %v\n", err)
+		s.Log("UpdateCache", fmt.Sprintf("Listing source target error: %v", err))
 		tranmissionLst = nil
 	}
 
@@ -136,7 +136,7 @@ func updateCache(s *MoveServer) {
 	for seriesTarget := range s.seriesTargets {
 		sl, err := getSeriesTargetListing(seriesTarget)
 		if err != nil {
-			log.Printf("Listing series target error: %v\n", err)
+			fmt.Printf("Listing series target error: %v", err)
 			continue
 		}
 		seriesListing = append(seriesListing, sl...)
@@ -145,7 +145,7 @@ func updateCache(s *MoveServer) {
 	// List all torrents from Transmission.
 	tis, err := s.t.ListAll()
 	if err != nil {
-		log.Printf("Getting torrents info error: %v\n", err)
+		s.Log("UpdateCache", fmt.Sprintf("Getting torrents info error: %v", err))
 		tis = nil
 	}
 
@@ -534,8 +534,6 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*transmission_go_api.T
 
 	s.moveTargets_sorted = moveTargets_sorted
 	s.moveTargets = moveTargets
-
-	s.Log("SetCachedInfo", fmt.Sprintf("Successfully updated cached info."))
 }
 
 func (s *MoveServer) setDiskStats(nds []DiskStats) {
