@@ -14,7 +14,8 @@ import (
 	"time"
 
 	"github.com/HawkMachine/kodi_automation/utils/collections"
-	"github.com/HawkMachine/transmission_go_api"
+	kd "github.com/HawkMachine/kodi_go_api/v6/kodi"
+	tr "github.com/HawkMachine/transmission_go_api"
 )
 
 // Returns a list of paths for all files and firectories in the source directory.
@@ -161,6 +162,49 @@ func cacheUpdater(s *MoveServer, d time.Duration) {
 	}
 }
 
+func (s *MoveServer) videoLibraryRefresh() {
+	s.lock.Lock()
+	if !s.videoLibraryIsDirty {
+		s.lock.Unlock()
+		return
+	}
+	for _, pi := range s.pathInfo {
+		if pi.MoveInfo.Moving {
+			s.lock.Unlock()
+			return
+		}
+	}
+	// Do not update when I'm home and probably watching.
+	if t := time.Now(); t.Hour() > 19 {
+		s.lock.Unlock()
+		return
+	}
+	s.lock.Unlock()
+
+	s.Log("KodiScan", fmt.Sprintf("Requesting scan on kodi"))
+	resp, err := s.k.VideoLibrary.Scan(
+		&kd.VideoLibraryScanParams{
+			ShowDialogs: false,
+		})
+	if err != nil {
+		s.Log("KodiScan", fmt.Sprintf("Kodi RPC failed: %v", err))
+		return
+	}
+	s.Log("KodiScan", fmt.Sprintf("Result: %s", resp.Result))
+
+	s.lock.Lock()
+	s.videoLibraryIsDirty = false
+	s.videoLibraryLastRefreshed = time.Now()
+	s.lock.Unlock()
+}
+
+func videoLibraryRefresher(s *MoveServer, d time.Duration) {
+	for {
+		s.videoLibraryRefresh()
+		time.Sleep(d)
+	}
+}
+
 func (s *MoveServer) UpdateCacheAsync() {
 	go func() {
 		updateCache(s)
@@ -194,7 +238,7 @@ type PathInfo struct {
 	Path        string // Present if found on disk.
 	AllowMove   bool
 	MoveInfo    PathMoveInfo
-	Torrent     *transmission_go_api.Torrent // Present if found in torrent.
+	Torrent     *tr.Torrent // Present if found in torrent.
 	PercentDone float64
 	// TODO: add field for files found on disk.
 }
@@ -209,7 +253,8 @@ type DiskStats struct {
 }
 
 type MoveServer struct {
-	t *transmission_go_api.Transmission
+	t *tr.Transmission
+	k *kd.Kodi
 
 	// Directory to scan
 	sourceDir string
@@ -239,7 +284,7 @@ type MoveServer struct {
 	// Disk stats
 	diskStats []DiskStats
 
-	// chennels
+	// Move channels.
 	moveChannel chan MoveListenerRequest
 
 	// Messages
@@ -248,15 +293,22 @@ type MoveServer struct {
 	lock         sync.Mutex
 	messagesLock sync.Mutex
 
+	// Move assistant.
 	assistant *Assistant
+
+	// Kodi refresh video library.
+	videoLibraryLastRefreshed time.Time
+	videoLibraryIsDirty       bool
 }
 
 func New(sourceDir string, moviesTarget []string, seriesTargets []string,
 	maxMvComands int, mvBufferSize int, assistantTarget string,
-	address, username, password string) (*MoveServer, error) {
-	t, _ := transmission_go_api.New(address, username, password)
+	address, username, password, kodiAddress, kodiUsername, kodiPassword string) (*MoveServer, error) {
+	t, _ := tr.New(address, username, password)
+	k := kd.New(kodiAddress, kodiUsername, kodiPassword)
 	s := &MoveServer{
 		t:               t,
+		k:               k,
 		sourceDir:       sourceDir,
 		moviesTargets:   collections.NewStringsSet(moviesTarget),
 		seriesTargets:   collections.NewStringsSet(seriesTargets),
@@ -288,6 +340,7 @@ func New(sourceDir string, moviesTarget []string, seriesTargets []string,
 	if s.assistant != nil {
 		go s.assistant.run()
 	}
+	// go videoLibraryRefresher(s, 5*time.Minute)
 
 	return s, nil
 }
@@ -428,6 +481,7 @@ func (s *MoveServer) SetPathMoveResult(path string, err error, output string) er
 		// Successful move.
 		delete(s.pathInfo, path)
 		s.pathInfoHistory = append(s.pathInfoHistory, pi)
+		s.videoLibraryIsDirty = true
 		s.Log("MoveResult", fmt.Sprintf("Successfully moved %s to %s", pi.Name, pi.MoveInfo.Target))
 	} else {
 		// Unsuccessful move.
@@ -436,7 +490,7 @@ func (s *MoveServer) SetPathMoveResult(path string, err error, output string) er
 	return nil
 }
 
-func (s *MoveServer) loadTorrentsInfo() ([]*transmission_go_api.Torrent, error) {
+func (s *MoveServer) loadTorrentsInfo() ([]*tr.Torrent, error) {
 	// In the future I need more to ask both - transmission and scan local disk.
 	return s.t.ListAll()
 }
@@ -452,7 +506,7 @@ func getSeriesTargetListing(seriesTarget string) ([]string, error) {
 // setCachedInfo updates cahed infor on MoveServer. paths is a list of paths in
 // the source dir, ntis is the new transmission info, nstl is the new
 // series target listing.
-func (s *MoveServer) setCachedInfo(paths []string, ntis []*transmission_go_api.Torrent, nstl []string) {
+func (s *MoveServer) setCachedInfo(paths []string, ntis []*tr.Torrent, nstl []string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 

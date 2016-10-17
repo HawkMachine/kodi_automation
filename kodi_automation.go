@@ -254,11 +254,18 @@ func main() {
 
 	// Initialize move server view.
 	moveServer, err := moveserver.New(
-		cfg.SourceDir, cfg.MoviesTargets, cfg.SeriesTargets, cfg.MaxMvCommands, cfg.MvBufferSize,
+		cfg.SourceDir,
+		cfg.MoviesTargets,
+		cfg.SeriesTargets,
+		cfg.MaxMvCommands,
+		cfg.MvBufferSize,
 		cfg.AssistantTarget,
 		cfg.TransmissionAddress,
 		cfg.TransmissionUsername,
-		cfg.TransmissionPassword)
+		cfg.TransmissionPassword,
+		cfg.KodiAddress,
+		cfg.KodiUsername,
+		cfg.KodiPassword)
 	if err != nil {
 		log.Fatal(err)
 	}
