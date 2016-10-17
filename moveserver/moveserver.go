@@ -272,10 +272,10 @@ func New(sourceDir string, moviesTarget []string, seriesTargets []string,
 	if assistantTarget != "" {
 		a := &Assistant{
 			msv: s,
-			maxConcurrentTorrents: 5,
-			maxConcurrentMoving:   1,
-			dryRun:                true,
-			moveTarget:            assistantTarget,
+			maxConcurrentDownloading: 5,
+			maxConcurrentMoving:      1,
+			dryRun:                   true,
+			moveTarget:               assistantTarget,
 		}
 		s.assistant = a
 	}

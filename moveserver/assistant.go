@@ -18,13 +18,13 @@ func filterPathInfo(a map[string]*PathInfo, f func(*PathInfo) bool) []*PathInfo 
 }
 
 type Assistant struct {
-	msv                   *MoveServer
-	sleep                 time.Duration
-	pause                 bool
-	dryRun                bool
-	moveTarget            string
-	maxConcurrentTorrents int
-	maxConcurrentMoving   int
+	msv                      *MoveServer
+	sleep                    time.Duration
+	pause                    bool
+	dryRun                   bool
+	moveTarget               string
+	maxConcurrentDownloading int
+	maxConcurrentMoving      int
 }
 
 func (a *Assistant) Log(tp, msg string) {
@@ -59,7 +59,7 @@ func (a *Assistant) assist() error {
 		return pi.AllowMove && !pi.MoveInfo.Moving && pi.Path != "" && pi.MoveInfo.LastError == nil && pi.Torrent != nil && pi.Torrent.DoneDate != 0 && pi.Torrent.PercentDone == 1.0 && pi.Torrent.Status == tr.TR_STATUS_PAUSED
 	})
 	todo := filterPathInfo(pis, func(pi *PathInfo) bool {
-		return pi.Torrent != nil && pi.Torrent.Status == tr.TR_STATUS_PAUSED && pi.Torrent.DoneDate == 0
+		return pi.Torrent != nil && pi.Torrent.Status == tr.TR_STATUS_PAUSED && pi.Torrent.DoneDate == 0 && pi.Torrent.PercentDone != 1.0
 	})
 	downloading := filterPathInfo(pis, func(pi *PathInfo) bool {
 		return pi.Torrent != nil && pi.Torrent.Status != tr.TR_STATUS_PAUSED
@@ -68,6 +68,7 @@ func (a *Assistant) assist() error {
 		return pi.MoveInfo.Moving
 	})
 
+	// *** Request to move some torrents.
 	toMoveSelected := []*PathInfo{}
 	for _, pi := range toMove {
 		if len(toMoveSelected)+len(moving) >= a.maxConcurrentMoving {
@@ -75,24 +76,46 @@ func (a *Assistant) assist() error {
 		}
 		toMoveSelected = append(toMoveSelected, pi)
 	}
-
-	for _, pi := range toMoveSelected {
-		a.Log("assist", fmt.Sprintf("Moving %s to %s", pi.Name, a.moveTarget))
-		err := a.msv.moveLocked(pi, a.moveTarget)
+	// First try removing those torrents from Transmission.
+	if len(toMoveSelected) > 0 {
+		logMsg := "Removing torrents from transmission"
+		var toMoveTorrents []*tr.Torrent
+		for _, pi := range toMoveSelected {
+			logMsg += fmt.Sprintf(", %s (Magnet: %s)", pi.Name, pi.Torrent.MagnetLink)
+			toMoveTorrents = append(toMoveTorrents, pi.Torrent)
+		}
+		a.Log("assist", logMsg)
+		err := a.msv.t.RemoveTorrents(toMoveTorrents)
 		if err != nil {
-			a.Log("assist", fmt.Sprintf("error %s", err))
+			return fmt.Errorf("Removing torrents from transmission failed: %v", err)
+		}
+		hadMoveErrors := false
+		for _, pi := range toMoveSelected {
+			a.Log("assist", fmt.Sprintf("Moving %s to %s", pi.Name, a.moveTarget))
+			err := a.msv.moveLocked(pi, a.moveTarget)
+			if err != nil {
+				hadMoveErrors = true
+				a.Log("assist", fmt.Sprintf("Moving %s to %s failed: %v", pi.Name, a.moveTarget, err))
+			}
+		}
+		if hadMoveErrors {
+			return fmt.Errorf("Requesting move had failures")
 		}
 	}
 
-	if len(todo) > 0 {
-		if len(downloading) > a.maxConcurrentTorrents {
-			a.Log("assist", fmt.Sprintf("Downloading %d, max concurrent downloads = %d, cannot download more", len(downloading), a.maxConcurrentTorrents))
-		} else {
-			a.Log("assist", fmt.Sprintf("Downloading %d, max concurrent downloads = %d, can enable %d out of %d",
-				len(downloading), a.maxConcurrentTorrents, a.maxConcurrentTorrents-len(downloading), len(todo)))
+	// Enable more torrents.
+	var toStart []*tr.Torrent
+	for _, pi := range todo {
+		if len(toStart)+len(downloading) >= a.maxConcurrentDownloading {
+			break
 		}
+		toStart = append(toStart, pi.Torrent)
+		a.Log("Starting torrent %s", pi.Name)
+	}
+	err := a.msv.t.StartTorrents(toStart)
+	if err != nil {
+		return fmt.Errorf("Failed to start torrents: %v", err)
 	} else {
-		a.Log("assist", "There are no candidates to download")
 	}
 
 	return nil
