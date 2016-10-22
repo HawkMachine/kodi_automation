@@ -127,24 +127,26 @@ func (msv *MoveServerView) moveDashboardPageHandler(w http.ResponseWriter, r *ht
 
 	sort.Sort(pathInfoList)
 	context := struct {
-		PathInfo        []*moveserver.PathInfo
-		PathInfoHistory []*moveserver.PathInfo
-		MoveTargets     []string
-		Errors          []error
-		CacheResfreshed string
-		MvBufferSize    int
-		MvBufferElems   int
-		DiskStats       []moveserver.DiskStats
-		Messages        []*moveserver.LogMessage
+		PathInfo         []*moveserver.PathInfo
+		PathInfoHistory  []*moveserver.PathInfo
+		MoveTargets      []string
+		Errors           []error
+		CacheResfreshed  string
+		MvBufferSize     int
+		MvBufferElems    int
+		DiskStats        []moveserver.DiskStats
+		Messages         []*moveserver.LogMessage
+		AssistantEnabled bool
 	}{
-		PathInfo:        pathInfoList,
-		PathInfoHistory: pathInfoHistoryList,
-		MoveTargets:     moveTargets,
-		CacheResfreshed: formattedCacheRefreshed,
-		MvBufferSize:    mvBuffSize,
-		MvBufferElems:   mvBuffElems,
-		DiskStats:       msv.moveServer.GetDiskStats(),
-		Messages:        messages,
+		PathInfo:         pathInfoList,
+		PathInfoHistory:  pathInfoHistoryList,
+		MoveTargets:      moveTargets,
+		CacheResfreshed:  formattedCacheRefreshed,
+		MvBufferSize:     mvBuffSize,
+		MvBufferElems:    mvBuffElems,
+		DiskStats:        msv.moveServer.GetDiskStats(),
+		Messages:         messages,
+		AssistantEnabled: msv.moveServer.Assistant.IsEnabled(),
 	}
 	s.RenderTemplate(w, r, msv.GetName(), "torrents_page", "Torrents", context)
 }

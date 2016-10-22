@@ -48,6 +48,14 @@ $('document').ready(function() {
 			<span flex="50"><b>Queue</b></span>
 			<span flex="50">{{.MvBufferElems}} / {{.MvBufferSize}}</span>
 		</div>
+		<div flex="20">
+			<span flex="50"><b>Assistant</b></span>
+			<span flex="50">
+			{{if .AssistantEnabled}}Enabled
+			{{else}}Disabled
+			{{end}}
+			</span>
+		</div>
 	</div>
 </md-toolbar>
 

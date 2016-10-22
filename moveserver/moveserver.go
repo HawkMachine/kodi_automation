@@ -294,7 +294,7 @@ type MoveServer struct {
 	messagesLock sync.Mutex
 
 	// Move assistant.
-	assistant *Assistant
+	Assistant *Assistant
 
 	// Kodi refresh video library.
 	videoLibraryLastRefreshed time.Time
@@ -329,7 +329,7 @@ func New(sourceDir string, moviesTarget []string, seriesTargets []string,
 			dryRun:                   true,
 			moveTarget:               assistantTarget,
 		}
-		s.assistant = a
+		s.Assistant = a
 	}
 
 	for i := 0; i < maxMvComands; i++ {
@@ -337,8 +337,8 @@ func New(sourceDir string, moviesTarget []string, seriesTargets []string,
 	}
 	go cacheUpdater(s, 5*time.Minute)
 	go diskStatsUpdater(s, 5*time.Minute)
-	if s.assistant != nil {
-		go s.assistant.run()
+	if s.Assistant != nil {
+		go s.Assistant.Enable()
 	}
 	// go videoLibraryRefresher(s, 5*time.Minute)
 

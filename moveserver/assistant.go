@@ -2,6 +2,7 @@ package moveserver
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	tr "github.com/HawkMachine/transmission_go_api"
@@ -20,15 +21,48 @@ func filterPathInfo(a map[string]*PathInfo, f func(*PathInfo) bool) []*PathInfo 
 type Assistant struct {
 	msv                      *MoveServer
 	sleep                    time.Duration
-	pause                    bool
+	enabled                  bool
+	runStarted               bool
 	dryRun                   bool
 	moveTarget               string
 	maxConcurrentDownloading int
 	maxConcurrentMoving      int
+
+	lock sync.Mutex
 }
 
 func (a *Assistant) Log(tp, msg string) {
 	a.msv.Log(fmt.Sprintf("Assistant.%s", tp), msg)
+}
+
+func (a *Assistant) Enable() {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+
+	if a.enabled {
+		return
+	}
+	if !a.runStarted {
+		go a.run()
+		a.runStarted = true
+	}
+	a.enabled = true
+}
+
+func (a *Assistant) Disable() {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+
+	if !a.enabled {
+		return
+	}
+	a.enabled = false
+}
+
+func (a *Assistant) IsEnabled() bool {
+	a.lock.Lock()
+	defer a.lock.Unlock()
+	return a.enabled
 }
 
 func (a *Assistant) run() {
@@ -36,8 +70,7 @@ func (a *Assistant) run() {
 		a.sleep = 1 * time.Minute
 	}
 	// a.sleep = 15 * time.Second
-	a.pause = false
-	for !a.pause {
+	for !a.enabled {
 		err := a.assist()
 		if err != nil {
 			a.Log("assist", fmt.Sprintf("Failed with error: %s", err))
@@ -53,7 +86,7 @@ func (a *Assistant) assist() error {
 	// Select candidates for moving.
 	// Very, very simple logic. Check if there are any torrents, allowed to move
 	// without move error. These must have torrent info and be paused (I rely
-	// here on a cron job that automatically pauses finished torrents.
+	// here on a cron job that automatically pause finished torrents.
 	pis := a.msv.pathInfo
 	toMove := filterPathInfo(pis, func(pi *PathInfo) bool {
 		return pi.AllowMove && !pi.MoveInfo.Moving && pi.Path != "" && pi.MoveInfo.LastError == nil && pi.Torrent != nil && pi.Torrent.DoneDate != 0 && pi.Torrent.PercentDone == 1.0 && pi.Torrent.Status == tr.TR_STATUS_PAUSED
@@ -61,6 +94,7 @@ func (a *Assistant) assist() error {
 	todo := filterPathInfo(pis, func(pi *PathInfo) bool {
 		return pi.Torrent != nil && pi.Torrent.Status == tr.TR_STATUS_PAUSED && pi.Torrent.DoneDate == 0 && pi.Torrent.PercentDone != 1.0
 	})
+
 	downloading := filterPathInfo(pis, func(pi *PathInfo) bool {
 		return pi.Torrent != nil && pi.Torrent.Status != tr.TR_STATUS_PAUSED
 	})
