@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/HawkMachine/kodi_automation/platform"
 	"github.com/HawkMachine/kodi_automation/utils/collections"
 	kd "github.com/HawkMachine/kodi_go_api/v6/kodi"
 	tr "github.com/HawkMachine/transmission_go_api"
@@ -301,11 +302,16 @@ type MoveServer struct {
 	videoLibraryIsDirty       bool
 }
 
-func New(sourceDir string, moviesTarget []string, seriesTargets []string,
-	maxMvComands int, mvBufferSize int, assistantTarget string,
-	address, username, password, kodiAddress, kodiUsername, kodiPassword string) (*MoveServer, error) {
-	t, _ := tr.New(address, username, password)
-	k := kd.New(kodiAddress, kodiUsername, kodiPassword)
+func New(p *platform.Platform, sourceDir string, moviesTarget []string, seriesTargets []string,
+	maxMvComands int, mvBufferSize int, assistantTarget string) (*MoveServer, error) {
+	t, _ := tr.New(
+		p.Config.Transmission.Address,
+		p.Config.Transmission.Username,
+		p.Config.Transmission.Password)
+	k := kd.New(
+		p.Config.Kodi.Address,
+		p.Config.Kodi.Username,
+		p.Config.Kodi.Password)
 	s := &MoveServer{
 		t:               t,
 		k:               k,

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/HawkMachine/kodi_automation/moveserver"
+	"github.com/HawkMachine/kodi_automation/platform"
 	"github.com/HawkMachine/kodi_automation/server"
 	"github.com/HawkMachine/kodi_automation/views/kodiview"
 	"github.com/HawkMachine/kodi_automation/views/moveserverview"
@@ -223,6 +224,10 @@ func main() {
 		time.Sleep(time.Second * 5)
 	}
 
+	if !strings.HasSuffix(cfg.KodiAddress, "/jsonrpc") {
+		cfg.KodiAddress += "/jsonrpc"
+	}
+
 	cfg.Links = replaceLocalHost(cfg.Links, ip)
 	cfg.IframeLinks = replaceLocalHost(cfg.IframeLinks, ip)
 
@@ -242,6 +247,16 @@ func main() {
 	log.Printf("IFRAME LINKS     = %v", cfg.IframeLinks)
 	log.Printf("IP               = %s", ip)
 
+	c := platform.NewConfigFromStrings(
+		cfg.KodiAddress,
+		cfg.KodiUsername,
+		cfg.KodiPassword,
+		cfg.TransmissionAddress,
+		cfg.TransmissionUsername,
+		cfg.TransmissionPassword)
+
+	p := platform.New(c)
+
 	// Server.
 	s := server.NewMyHTTPServer(
 		cfg.Port,
@@ -254,18 +269,13 @@ func main() {
 
 	// Initialize move server view.
 	moveServer, err := moveserver.New(
+		p,
 		cfg.SourceDir,
 		cfg.MoviesTargets,
 		cfg.SeriesTargets,
 		cfg.MaxMvCommands,
 		cfg.MvBufferSize,
-		cfg.AssistantTarget,
-		cfg.TransmissionAddress,
-		cfg.TransmissionUsername,
-		cfg.TransmissionPassword,
-		cfg.KodiAddress,
-		cfg.KodiUsername,
-		cfg.KodiPassword)
+		cfg.AssistantTarget)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -286,17 +296,14 @@ func main() {
 		var scanTargets []string
 		scanTargets = append(scanTargets, cfg.MoviesTargets...)
 		scanTargets = append(scanTargets, cfg.SeriesTargets...)
-		views = append(views, kodiview.New(cfg.KodiAddress, cfg.KodiUsername, cfg.KodiPassword, scanTargets))
+		views = append(views, kodiview.New(p, scanTargets))
 	} else {
 		log.Println("Kodi address missing. Skipping kodi stats view.")
 	}
 
 	// Transmission view
 	if cfg.TransmissionAddress != "" {
-		views = append(views, transmissionview.New(
-			cfg.TransmissionAddress,
-			cfg.TransmissionUsername,
-			cfg.TransmissionPassword))
+		views = append(views, transmissionview.New(p))
 	}
 
 	// Run server.

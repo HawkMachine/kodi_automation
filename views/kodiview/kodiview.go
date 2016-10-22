@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/HawkMachine/kodi_automation/platform"
 	"github.com/HawkMachine/kodi_automation/server"
 	"github.com/HawkMachine/kodi_go_api/v6/kodi"
 )
@@ -31,6 +32,7 @@ func diff(a, b map[string]bool) map[string]bool {
 }
 
 type KodiView struct {
+	p               *platform.Platform
 	k               *kodi.Kodi
 	targets         []string
 	movieExtensions map[string]bool
@@ -270,9 +272,13 @@ func (ksv *KodiView) kodiLibraryTVShowsPageHandler(w http.ResponseWriter, r *htt
 	s.RenderTemplate(w, r, ksv.GetName(), "library_tvshows", "Tv Shows Library", context)
 }
 
-func New(address, username, password string, targets []string) *KodiView {
+func New(p *platform.Platform, targets []string) *KodiView {
 	return &KodiView{
-		k:       kodi.New(address+"/jsonrpc", username, password),
+		p: p,
+		k: kodi.New(
+			p.Config.Kodi.Address,
+			p.Config.Kodi.Username,
+			p.Config.Kodi.Password),
 		targets: targets,
 		movieExtensions: map[string]bool{
 			".mkv":  true,
