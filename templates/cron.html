@@ -1,0 +1,13 @@
+{{define "section"}}
+
+{{range  $name, $c := .CronJobs}}
+<md-card>
+<md-card-content>
+<h3>{{$name}}</h3>
+
+
+</md-card-content>
+</md-card>
+{{end}}
+
+{{end}}

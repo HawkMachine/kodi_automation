@@ -15,6 +15,7 @@ import (
 	"github.com/HawkMachine/kodi_automation/moveserver"
 	"github.com/HawkMachine/kodi_automation/platform"
 	"github.com/HawkMachine/kodi_automation/server"
+	"github.com/HawkMachine/kodi_automation/views/cronview"
 	"github.com/HawkMachine/kodi_automation/views/kodiview"
 	"github.com/HawkMachine/kodi_automation/views/moveserverview"
 	"github.com/HawkMachine/kodi_automation/views/transmissionview"
@@ -288,6 +289,9 @@ func main() {
 		log.Fatal(err)
 	}
 	views = append(views, moveServerView)
+
+	// Cron View
+	views = append(views, cronview.New(s, p))
 
 	// Wrap view.
 	views = append(views, wrapview.New(cfg.IframeLinks))

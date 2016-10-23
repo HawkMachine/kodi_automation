@@ -73,6 +73,12 @@ func New() *Cron {
 	}
 }
 
+func (c *Cron) CronJobs() map[string]*CronJob {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return c.jobs
+}
+
 func (c *Cron) Register(name string, f CronFunc, interval time.Duration) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
