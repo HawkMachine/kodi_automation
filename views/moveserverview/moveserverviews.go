@@ -125,6 +125,11 @@ func (msv *MoveServerView) moveDashboardPageHandler(w http.ResponseWriter, r *ht
 	messages := msv.moveServer.GetMessages()
 	log.Printf("messages %s", messages)
 
+	assistantEnabled := false
+	if msv.moveServer.Assistant != nil {
+		assistantEnabled = msv.moveServer.Assistant.IsEnabled()
+	}
+
 	sort.Sort(pathInfoList)
 	context := struct {
 		PathInfo         []*moveserver.PathInfo
@@ -146,7 +151,7 @@ func (msv *MoveServerView) moveDashboardPageHandler(w http.ResponseWriter, r *ht
 		MvBufferElems:    mvBuffElems,
 		DiskStats:        msv.moveServer.GetDiskStats(),
 		Messages:         messages,
-		AssistantEnabled: msv.moveServer.Assistant.IsEnabled(),
+		AssistantEnabled: assistantEnabled,
 	}
 	s.RenderTemplate(w, r, msv.GetName(), "torrents_page", "Torrents", context)
 }
