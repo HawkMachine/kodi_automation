@@ -45,7 +45,7 @@ type Platform struct {
 
 func New(c Config) *Platform {
 	return &Platform{
-		Cron:   &cron.Cron{},
+		Cron:   cron.New(),
 		Config: c,
 	}
 }

@@ -7,10 +7,11 @@ import (
 )
 
 type RunInfo struct {
-	Start   time.Time
-	End     time.Time
-	Skipped bool
-	Err     error
+	Start    time.Time
+	End      time.Time
+	Duration time.Duration
+	Skipped  bool
+	Err      error
 }
 
 type CronFunc func() error
@@ -43,9 +44,13 @@ func (cj *CronJob) runEnded(err error) {
 	defer cj.lock.Unlock()
 
 	cj.info.End = time.Now()
+	cj.info.Duration = cj.info.End.Sub(cj.info.Start)
 	cj.info.Err = err
 
-	cj.history = append(cj.history, cj.info)
+	if len(cj.history) > 1000 {
+		cj.history = cj.history[:1000]
+	}
+	cj.history = append([]*RunInfo{cj.info}, cj.history...)
 	cj.info = nil
 }
 
@@ -60,6 +65,12 @@ type Cron struct {
 	jobs map[string]*CronJob
 
 	lock sync.Mutex
+}
+
+func New() *Cron {
+	return &Cron{
+		jobs: map[string]*CronJob{},
+	}
 }
 
 func (c *Cron) Register(name string, f CronFunc, interval time.Duration) error {
