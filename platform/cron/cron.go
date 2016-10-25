@@ -17,12 +17,12 @@ type RunInfo struct {
 type CronFunc func() error
 
 type CronJob struct {
-	name     string
+	Name     string
 	f        CronFunc
-	interval time.Duration
-	enabled  bool
-	info     *RunInfo
-	history  []*RunInfo
+	Interval time.Duration
+	Enabled  bool
+	Info     *RunInfo
+	History  []*RunInfo
 
 	lock sync.Mutex
 }
@@ -31,11 +31,11 @@ func (cj *CronJob) newRun() bool {
 	cj.lock.Lock()
 	defer cj.lock.Unlock()
 
-	if !cj.enabled {
-		cj.history = append(cj.history, &RunInfo{Start: time.Now(), Skipped: true})
+	if !cj.Enabled {
+		cj.History = append(cj.History, &RunInfo{Start: time.Now(), Skipped: true})
 		return false
 	}
-	cj.info = &RunInfo{Start: time.Now()}
+	cj.Info = &RunInfo{Start: time.Now()}
 	return true
 }
 
@@ -43,15 +43,15 @@ func (cj *CronJob) runEnded(err error) {
 	cj.lock.Lock()
 	defer cj.lock.Unlock()
 
-	cj.info.End = time.Now()
-	cj.info.Duration = cj.info.End.Sub(cj.info.Start)
-	cj.info.Err = err
+	cj.Info.End = time.Now()
+	cj.Info.Duration = cj.Info.End.Sub(cj.Info.Start)
+	cj.Info.Err = err
 
-	if len(cj.history) > 1000 {
-		cj.history = cj.history[:1000]
+	if len(cj.History) > 1000 {
+		cj.History = cj.History[:1000]
 	}
-	cj.history = append([]*RunInfo{cj.info}, cj.history...)
-	cj.info = nil
+	cj.History = append([]*RunInfo{cj.Info}, cj.History...)
+	cj.Info = nil
 }
 
 func (cj *CronJob) Run() {
@@ -88,10 +88,10 @@ func (c *Cron) Register(name string, f CronFunc, interval time.Duration) error {
 	}
 
 	j := &CronJob{
-		name:     name,
+		Name:     name,
 		f:        f,
-		enabled:  true,
-		interval: interval,
+		Enabled:  true,
+		Interval: interval,
 	}
 	c.jobs[name] = j
 	go c.run(j)
@@ -100,7 +100,7 @@ func (c *Cron) Register(name string, f CronFunc, interval time.Duration) error {
 
 func (c *Cron) run(j *CronJob) {
 	for {
-		time.Sleep(j.interval)
+		time.Sleep(j.Interval)
 		j.Run()
 	}
 }

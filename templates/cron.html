@@ -5,6 +5,22 @@
 <md-card-content>
 <h3>{{$name}}</h3>
 
+<div layout="column">
+	{{range $idx, $ri := $c.History}}
+	<div layout="row">
+		<div flex=10>{{timeformat $ri.Start ""}}</div>
+		<div flex=10>{{timeformat $ri.End ""}}</div>
+		<div flex=10>{{$ri.Duration}}</div>
+		<div flex>
+			{{if $ri.Err}}
+			  {{$ri.Err}}
+			{{else}}
+			  OK
+			{{end}}
+		</div>
+	</div>
+	{{end}}
+</div>
 
 </md-card-content>
 </md-card>
