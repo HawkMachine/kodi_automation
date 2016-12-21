@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"net"
 	"path/filepath"
 	"strings"
@@ -310,14 +309,6 @@ func main() {
 	if cfg.TransmissionAddress != "" {
 		views = append(views, transmissionview.New(p))
 	}
-
-	p.Cron.Register("40% fail/5s", func() error {
-		d := rand.Int() % 10
-		if d < 4 {
-			return fmt.Errorf("Failed with %d", d)
-		}
-		return nil
-	}, 5*time.Second)
 
 	// Run server.
 	for _, v := range views {

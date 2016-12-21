@@ -40,6 +40,10 @@ func (msv *MoveServerView) GetTemplates() map[string][]string {
 			"base.html",
 			"torrents_page.html",
 		},
+		"assistant_page": []string{
+			"base.html",
+			"assistant.html",
+		},
 	}
 }
 
@@ -49,13 +53,14 @@ func (msv *MoveServerView) GetHandlers() map[string]server.ViewHandle {
 		"/move":         server.NewViewHandle(msv.movePostHandler),
 		"/update/cache": server.NewViewHandle(msv.updateCacheHandler),
 		"/update/disks": server.NewViewHandle(msv.updateDiskStatsHandler),
+		"/assistant":    server.NewViewHandle(msv.assistantHandler),
 	}
-
 }
 
 func (msv *MoveServerView) GetMenu() (string, map[string]string) {
 	return "Move Server", map[string]string{
 		"Move Dashboard": "/",
+		"Assistant":      "/assistant",
 	}
 }
 
@@ -154,4 +159,13 @@ func (msv *MoveServerView) moveDashboardPageHandler(w http.ResponseWriter, r *ht
 		AssistantEnabled: assistantEnabled,
 	}
 	s.RenderTemplate(w, r, msv.GetName(), "torrents_page", "Torrents", context)
+}
+
+func (msv *MoveServerView) assistantHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {
+	context := struct {
+		Assistant *moveserver.Assistant
+	}{
+		Assistant: msv.moveServer.Assistant,
+	}
+	s.RenderTemplate(w, r, msv.GetName(), "assistant_page", "Assistant", context)
 }

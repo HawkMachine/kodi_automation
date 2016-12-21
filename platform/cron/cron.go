@@ -61,6 +61,27 @@ func (cj *CronJob) Run() {
 	cj.runEnded(cj.f())
 }
 
+func (cj *CronJob) Enable() {
+	cj.lock.Lock()
+	defer cj.lock.Unlock()
+
+	cj.Enabled = true
+}
+
+func (cj *CronJob) Disable() {
+	cj.lock.Lock()
+	defer cj.lock.Unlock()
+
+	cj.Enabled = false
+}
+
+func (cj *CronJob) IsEnabled() bool {
+	cj.lock.Lock()
+	defer cj.lock.Unlock()
+
+	return cj.Enabled
+}
+
 type Cron struct {
 	jobs map[string]*CronJob
 
@@ -79,12 +100,12 @@ func (c *Cron) CronJobs() map[string]*CronJob {
 	return c.jobs
 }
 
-func (c *Cron) Register(name string, f CronFunc, interval time.Duration) error {
+func (c *Cron) Register(name string, f CronFunc, interval time.Duration) (*CronJob, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	if _, ok := c.jobs[name]; ok {
-		return fmt.Errorf("Cron job %s already exists!", name)
+		return nil, fmt.Errorf("Cron job %s already exists!", name)
 	}
 
 	j := &CronJob{
@@ -95,7 +116,7 @@ func (c *Cron) Register(name string, f CronFunc, interval time.Duration) error {
 	}
 	c.jobs[name] = j
 	go c.run(j)
-	return nil
+	return j, nil
 }
 
 func (c *Cron) run(j *CronJob) {

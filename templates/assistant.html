@@ -1,0 +1,29 @@
+{{define "section"}}
+
+<md-card>
+<md-card-content layout="column">
+<h3>Torrent status</h3>
+<b>
+<div layout="row">
+	<div flex=40>Name</div>
+	<div flex=20>Start status</div>
+	<div flex=20>Move status</div>
+	<div flex=20>Status</div>
+</div>
+</b>
+{{if .Assistant}}
+{{if .Assistant.TorrentStatus}}
+{{range  $name, $ts := .Assistant.TorrentStatus}}
+<div layout="row">
+	<div flex=40>{{$name}}</div>
+	<div flex=20>{{$ts.StartStatus}}</div>
+	<div flex=20>{{$ts.MoveStatus}}</div>
+	<div flex=20>{{$ts.Status}}</div>
+</div>
+{{end}}
+{{end}}
+{{end}}
+</md-card-content>
+</md-card>
+
+{{end}}

@@ -3,7 +3,7 @@
 {{range  $name, $c := .CronJobs}}
 <md-card>
 <md-card-content>
-<h3>{{$name}}</h3>
+<h3>{{$name}} ({{$c.Interval}})</h3>
 
 <div layout="column">
 	{{range $idx, $ri := $c.History}}

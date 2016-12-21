@@ -15,6 +15,7 @@ import (
 
 	"github.com/HawkMachine/kodi_automation/platform"
 	"github.com/HawkMachine/kodi_automation/utils/collections"
+
 	kd "github.com/HawkMachine/kodi_go_api/v6/kodi"
 	tr "github.com/HawkMachine/transmission_go_api"
 )
@@ -235,12 +236,13 @@ type PathMoveInfo struct {
 
 // Information about tranmission files.
 type PathInfo struct {
-	Name        string
-	Path        string // Present if found on disk.
-	AllowMove   bool
-	MoveInfo    PathMoveInfo
-	Torrent     *tr.Torrent // Present if found in torrent.
-	PercentDone float64
+	Name           string
+	Path           string // Present if found on disk.
+	AllowMove      bool
+	AllowAssistant bool
+	MoveInfo       PathMoveInfo
+	Torrent        *tr.Torrent // Present if found in torrent.
+	PercentDone    float64
 	// TODO: add field for files found on disk.
 }
 
@@ -254,6 +256,7 @@ type DiskStats struct {
 }
 
 type MoveServer struct {
+	p *platform.Platform
 	t *tr.Transmission
 	k *kd.Kodi
 
@@ -313,6 +316,7 @@ func New(p *platform.Platform, sourceDir string, moviesTarget []string, seriesTa
 		p.Config.Kodi.Username,
 		p.Config.Kodi.Password)
 	s := &MoveServer{
+		p:               p,
 		t:               t,
 		k:               k,
 		sourceDir:       sourceDir,
@@ -328,14 +332,9 @@ func New(p *platform.Platform, sourceDir string, moviesTarget []string, seriesTa
 		messagesLock:    sync.Mutex{},
 	}
 	if assistantTarget != "" {
-		a := &Assistant{
-			msv: s,
-			maxConcurrentDownloading: 5,
-			maxConcurrentMoving:      1,
-			dryRun:                   true,
-			moveTarget:               assistantTarget,
-		}
-		s.Assistant = a
+		s.Assistant = newAssistant(s, assistantTarget)
+	} else {
+		log.Print("assistant target path is empty, assistant not created")
 	}
 
 	for i := 0; i < maxMvComands; i++ {
@@ -344,7 +343,8 @@ func New(p *platform.Platform, sourceDir string, moviesTarget []string, seriesTa
 	go cacheUpdater(s, 5*time.Minute)
 	go diskStatsUpdater(s, 5*time.Minute)
 	if s.Assistant != nil {
-		go s.Assistant.Enable()
+		s.Assistant.Enable()
+		s.Log("moveserver", fmt.Sprintf("assistant created with target path %s", s.Assistant.moveTarget))
 	}
 	// go videoLibraryRefresher(s, 5*time.Minute)
 

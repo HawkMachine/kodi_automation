@@ -2,8 +2,11 @@ package moveserver
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
+
+	"github.com/HawkMachine/kodi_automation/platform/cron"
 
 	tr "github.com/HawkMachine/transmission_go_api"
 )
@@ -18,17 +21,39 @@ func filterPathInfo(a map[string]*PathInfo, f func(*PathInfo) bool) []*PathInfo 
 	return r
 }
 
+type TorrentStatus struct {
+	Name        string
+	MoveStatus  string
+	StartStatus string
+	Status      string
+}
+
 type Assistant struct {
 	msv                      *MoveServer
 	sleep                    time.Duration
-	enabled                  bool
-	runStarted               bool
 	dryRun                   bool
 	moveTarget               string
 	maxConcurrentDownloading int
 	maxConcurrentMoving      int
 
+	enabled       bool
+	runStarted    bool
+	TorrentStatus map[string]*TorrentStatus
+
+	j *cron.CronJob
+
 	lock sync.Mutex
+}
+
+func newAssistant(msv *MoveServer, moveTarget string) *Assistant {
+	return &Assistant{
+		msv:                      msv,
+		sleep:                    time.Minute,
+		moveTarget:               moveTarget,
+		maxConcurrentDownloading: 5,
+		maxConcurrentMoving:      1,
+		TorrentStatus:            map[string]*TorrentStatus{},
+	}
 }
 
 func (a *Assistant) Log(tp, msg string) {
@@ -39,44 +64,81 @@ func (a *Assistant) Enable() {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	if a.enabled {
-		return
+	if a.sleep < time.Minute {
+		a.sleep = time.Minute
 	}
-	if !a.runStarted {
-		go a.run()
-		a.runStarted = true
+
+	if a.j == nil {
+		// TODO: do not ignore errors
+		a.j, _ = a.msv.p.Cron.Register("assistant", a.assist, a.sleep)
 	}
-	a.enabled = true
+	a.j.Enable()
 }
 
 func (a *Assistant) Disable() {
 	a.lock.Lock()
 	defer a.lock.Unlock()
 
-	if !a.enabled {
+	if a.j == nil {
 		return
 	}
-	a.enabled = false
+	a.j.Disable()
 }
 
 func (a *Assistant) IsEnabled() bool {
 	a.lock.Lock()
 	defer a.lock.Unlock()
-	return a.enabled
+	if a.j == nil {
+		return false
+	}
+	return a.j.IsEnabled()
 }
 
-func (a *Assistant) run() {
-	if a.sleep < 1*time.Minute {
-		a.sleep = 1 * time.Minute
+func (a *Assistant) shouldMove(pi *PathInfo) (bool, string) {
+	if !pi.AllowMove {
+		return false, "AllowMove = false"
 	}
-	// a.sleep = 15 * time.Second
-	for !a.enabled {
-		err := a.assist()
-		if err != nil {
-			a.Log("assist", fmt.Sprintf("Failed with error: %s", err))
-		}
-		time.Sleep(a.sleep)
+	if !pi.AllowAssistant {
+		return false, "AllowAssistant = false"
 	}
+	if pi.MoveInfo.Moving {
+		return false, "Currently moving"
+	}
+	if pi.Path == "" {
+		return false, "Path is empty, probably just in transmission"
+	}
+	if pi.MoveInfo.LastError != nil {
+		return false, fmt.Sprintf("Last move error is: %v", pi.MoveInfo.LastError)
+	}
+	if pi.Torrent == nil {
+		return false, fmt.Sprintf("Torrent is nil, probably just on disk")
+	}
+	if pi.Torrent.DoneDate == 0 {
+		return false, "Torrent.DoneDate is 0"
+	}
+	if pi.Torrent.PercentDone != 1.0 {
+		return false, "Torrent.PercentDone != 1.0"
+	}
+	if pi.Torrent.Status != tr.TR_STATUS_PAUSED {
+		return false, fmt.Sprintf("Torrent.Status != TR_STATUS_PAUSED, == %v", pi.Torrent.Status)
+	}
+	return true, "Allowed to be moved"
+}
+
+func (a *Assistant) shouldStart(pi *PathInfo) (bool, string) {
+	if pi.Torrent == nil {
+		return false, "Torrent is nil, probably only found on disk"
+	}
+	if pi.Torrent.Status != tr.TR_STATUS_PAUSED {
+		return false, "Torrent.Status is not PAUSED"
+	}
+	if pi.Torrent.DoneDate != 0 {
+		return false, fmt.Sprintf("Torrent.DoneDate != 0, == %v", pi.Torrent.DoneDate)
+	}
+	if pi.Torrent.PercentDone == 1.0 {
+		return false, "Torrent.PercentDone == 1.0, considered done"
+	}
+	return true, "Allowed to start"
 }
 
 func (a *Assistant) assist() error {
@@ -87,13 +149,29 @@ func (a *Assistant) assist() error {
 	// Very, very simple logic. Check if there are any torrents, allowed to move
 	// without move error. These must have torrent info and be paused (I rely
 	// here on a cron job that automatically pause finished torrents.
+	tss := map[string]*TorrentStatus{}
 	pis := a.msv.pathInfo
-	toMove := filterPathInfo(pis, func(pi *PathInfo) bool {
-		return pi.AllowMove && !pi.MoveInfo.Moving && pi.Path != "" && pi.MoveInfo.LastError == nil && pi.Torrent != nil && pi.Torrent.DoneDate != 0 && pi.Torrent.PercentDone == 1.0 && pi.Torrent.Status == tr.TR_STATUS_PAUSED
-	})
-	todo := filterPathInfo(pis, func(pi *PathInfo) bool {
-		return pi.Torrent != nil && pi.Torrent.Status == tr.TR_STATUS_PAUSED && pi.Torrent.DoneDate == 0 && pi.Torrent.PercentDone != 1.0
-	})
+	toMove := []*PathInfo{}
+	todo := []*PathInfo{}
+
+	for _, pi := range pis {
+		ts := &TorrentStatus{Name: pi.Name}
+		tss[pi.Name] = ts
+		shouldMove, moveStatus := a.shouldMove(pi)
+		shouldStart, startStatus := a.shouldStart(pi)
+		ts.MoveStatus = moveStatus
+		ts.StartStatus = startStatus
+		if shouldMove && shouldStart {
+			ts.Status = "Internal error, move and start allowed at the same time."
+			continue
+		} else if shouldMove {
+			toMove = append(toMove, pi)
+		} else if shouldStart {
+			todo = append(todo, pi)
+		}
+	}
+	a.TorrentStatus = tss
+	log.Printf("New tss: %v", tss)
 
 	downloading := filterPathInfo(pis, func(pi *PathInfo) bool {
 		return pi.Torrent != nil && pi.Torrent.Status != tr.TR_STATUS_PAUSED
