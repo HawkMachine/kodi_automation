@@ -538,8 +538,9 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*tr.Torrent, nstl []st
 	for _, path := range paths {
 		name := filepath.Base(path)
 		newPathInfo[name] = &PathInfo{
-			Name: name,
-			Path: path,
+			Name:           name,
+			Path:           path,
+			AllowAssistant: true,
 		}
 	}
 
@@ -548,9 +549,10 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*tr.Torrent, nstl []st
 		pi, ok := newPathInfo[t.Name]
 		if !ok {
 			newPathInfo[t.Name] = &PathInfo{
-				Name:        t.Name,
-				Torrent:     t,
-				PercentDone: t.PercentDone * 100,
+				Name:           t.Name,
+				Torrent:        t,
+				PercentDone:    t.PercentDone * 100,
+				AllowAssistant: true,
 			}
 		} else {
 			// Try to join path info from torrent info.
@@ -564,6 +566,7 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*tr.Torrent, nstl []st
 		// TODO: keep the old move info in some sort of history.
 		if pi, ok := newPathInfo[opi.Name]; ok {
 			pi.MoveInfo = opi.MoveInfo
+			pi.AllowAssistant = opi.AllowAssistant
 		} else {
 			s.pathInfoDisappeared = append(s.pathInfoDisappeared, opi)
 		}
