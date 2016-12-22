@@ -50,14 +50,9 @@ var (
 )
 
 type config struct {
-	Port            int      `json:"port,omitempty"`
-	SourceDir       string   `json:"source_dir,omitempty"`
-	MoviesTargets   []string `json:"movies_targets,omitempty"`
-	SeriesTargets   []string `json:"series_targets,omitempty"`
-	AssistantTarget string   `json:"assistant_target,omitempty"`
+	Port int `json:"port,omitempty"`
 
-	MvBufferSize  int `json:"mv_buffer_size,omitempty"`
-	MaxMvCommands int `json:"max_mv_commands,omitempty"`
+	MoveServer moveserver.MoveServerConfig `json:"move_server,omitempty"`
 
 	Links       map[string]string `json:"links,omitempty"`
 	IframeLinks map[string]string `json:"iframe_links,omitempty"`
@@ -151,16 +146,17 @@ func main() {
 		iframeLinks := parseCustomLinksFlag(*customIframeLinks)
 
 		cfg = &config{
-			Port:          *port,
-			SourceDir:     *sourceDir,
-			SeriesTargets: strings.Split(*seriesTarget, ","),
-			MoviesTargets: strings.Split(*moviesTarget, ","),
+			Port: *port,
+			MoveServer: moveserver.MoveServerConfig{
+				SourceDir:     *sourceDir,
+				SeriesTargets: strings.Split(*seriesTarget, ","),
+				MoviesTargets: strings.Split(*moviesTarget, ","),
+				MvBufferSize:  *mvBufferSize,
+				MaxMvCommands: *maxMvCommands,
+			},
 
 			TemplatesPath: *templatesPath,
 			ResourcesPath: *resourcesPath,
-
-			MvBufferSize:  *mvBufferSize,
-			MaxMvCommands: *maxMvCommands,
 
 			KodiAddress:  *kodiAddress,
 			KodiUsername: *kodiUsername,
@@ -183,24 +179,24 @@ func main() {
 	log.Printf("CONFIG           = %#v", cfg)
 
 	var err error
-	if cfg.SourceDir == "" {
+	if cfg.MoveServer.SourceDir == "" {
 		log.Fatal("Missing source directory")
 	}
-	if cfg.SourceDir, err = filepath.Abs(cfg.SourceDir); err != nil {
+	if cfg.MoveServer.SourceDir, err = filepath.Abs(cfg.MoveServer.SourceDir); err != nil {
 		log.Fatal(err)
 	}
-	if len(cfg.MoviesTargets) == 0 {
+	if len(cfg.MoveServer.MoviesTargets) == 0 {
 		log.Fatal(fmt.Errorf("Movies targets resolves to empty list"))
 	}
-	if len(cfg.SeriesTargets) == 0 {
+	if len(cfg.MoveServer.SeriesTargets) == 0 {
 		log.Fatal(fmt.Errorf("Series targets resolves to empty list"))
 	}
 
-	if cfg.MaxMvCommands <= 5 {
-		cfg.MaxMvCommands = 5
+	if cfg.MoveServer.MaxMvCommands <= 5 {
+		cfg.MoveServer.MaxMvCommands = 5
 	}
-	if cfg.MvBufferSize <= 5 {
-		cfg.MvBufferSize = 5
+	if cfg.MoveServer.MvBufferSize <= 5 {
+		cfg.MoveServer.MvBufferSize = 5
 	}
 	if cfg.WaitForIP <= 5 {
 		cfg.WaitForIP = 5
@@ -236,11 +232,11 @@ func main() {
 	log.Printf("PORT             = %d", cfg.Port)
 	log.Printf("TEMPLATES PATH   = %s", cfg.TemplatesPath)
 	log.Printf("RESOURCES PATH   = %s", cfg.ResourcesPath)
-	log.Printf("SOURCE DIR       = %s", cfg.SourceDir)
-	log.Printf("MOVIES TARGETS   = %v", cfg.MoviesTargets)
-	log.Printf("SERIES TARGETS   = %s", cfg.SeriesTargets)
-	log.Printf("MAX MV COMMANDS  = %d", cfg.MaxMvCommands)
-	log.Printf("MV BUFFER SIZE   = %d", cfg.MvBufferSize)
+	log.Printf("SOURCE DIR       = %s", cfg.MoveServer.SourceDir)
+	log.Printf("MOVIES TARGETS   = %v", cfg.MoveServer.MoviesTargets)
+	log.Printf("SERIES TARGETS   = %s", cfg.MoveServer.SeriesTargets)
+	log.Printf("MAX MV COMMANDS  = %d", cfg.MoveServer.MaxMvCommands)
+	log.Printf("MV BUFFER SIZE   = %d", cfg.MoveServer.MvBufferSize)
 	log.Printf("WAIT FOR IP      = %d", cfg.WaitForIP)
 	log.Printf("LINKS            = %v", cfg.Links)
 	log.Printf("IFRAME LINKS     = %v", cfg.IframeLinks)
@@ -269,14 +265,7 @@ func main() {
 		cfg.IframeLinks)
 
 	// Initialize move server view.
-	moveServer, err := moveserver.New(
-		p,
-		cfg.SourceDir,
-		cfg.MoviesTargets,
-		cfg.SeriesTargets,
-		cfg.MaxMvCommands,
-		cfg.MvBufferSize,
-		cfg.AssistantTarget)
+	moveServer, err := moveserver.New(p, cfg.MoveServer)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -298,8 +287,8 @@ func main() {
 	// Kodi stats view.
 	if cfg.KodiAddress != "" {
 		var scanTargets []string
-		scanTargets = append(scanTargets, cfg.MoviesTargets...)
-		scanTargets = append(scanTargets, cfg.SeriesTargets...)
+		scanTargets = append(scanTargets, cfg.MoveServer.MoviesTargets...)
+		scanTargets = append(scanTargets, cfg.MoveServer.SeriesTargets...)
 		views = append(views, kodiview.New(p, scanTargets))
 	} else {
 		log.Println("Kodi address missing. Skipping kodi stats view.")

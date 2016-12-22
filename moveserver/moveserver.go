@@ -255,6 +255,15 @@ type DiskStats struct {
 	FsType      string
 }
 
+type MoveServerConfig struct {
+	SourceDir       string   `json:"source_dir"`
+	MoviesTargets   []string `json:"movies_targets"`
+	SeriesTargets   []string `json:"series_targets"`
+	MaxMvCommands   int      `json:"max_mv_commands"`
+	MvBufferSize    int      `json:"mv_buffer_size"`
+	AssistantTarget string   `json:"assistant_target"`
+}
+
 type MoveServer struct {
 	p *platform.Platform
 	t *tr.Transmission
@@ -305,8 +314,7 @@ type MoveServer struct {
 	videoLibraryIsDirty       bool
 }
 
-func New(p *platform.Platform, sourceDir string, moviesTarget []string, seriesTargets []string,
-	maxMvComands int, mvBufferSize int, assistantTarget string) (*MoveServer, error) {
+func New(p *platform.Platform, c MoveServerConfig) (*MoveServer, error) {
 	t, _ := tr.New(
 		p.Config.Transmission.Address,
 		p.Config.Transmission.Username,
@@ -319,25 +327,25 @@ func New(p *platform.Platform, sourceDir string, moviesTarget []string, seriesTa
 		p:               p,
 		t:               t,
 		k:               k,
-		sourceDir:       sourceDir,
-		moviesTargets:   collections.NewStringsSet(moviesTarget),
-		seriesTargets:   collections.NewStringsSet(seriesTargets),
+		sourceDir:       c.SourceDir,
+		moviesTargets:   collections.NewStringsSet(c.MoviesTargets),
+		seriesTargets:   collections.NewStringsSet(c.SeriesTargets),
 		pathInfoHistory: []*PathInfo{},
 		pathInfo:        map[string]*PathInfo{},
 		refreshDuration: 5 * time.Minute,
 		cacheRefreshed:  time.Now(),
-		moveChannel:     make(chan MoveListenerRequest, mvBufferSize),
+		moveChannel:     make(chan MoveListenerRequest, c.MvBufferSize),
 		messages:        []*LogMessage{},
 		lock:            sync.Mutex{},
 		messagesLock:    sync.Mutex{},
 	}
-	if assistantTarget != "" {
-		s.Assistant = newAssistant(s, assistantTarget)
+	if c.AssistantTarget != "" {
+		s.Assistant = newAssistant(s, c.AssistantTarget)
 	} else {
 		log.Print("assistant target path is empty, assistant not created")
 	}
 
-	for i := 0; i < maxMvComands; i++ {
+	for i := 0; i < c.MaxMvCommands; i++ {
 		go moveListener(s, s.moveChannel)
 	}
 	go cacheUpdater(s, 5*time.Minute)
