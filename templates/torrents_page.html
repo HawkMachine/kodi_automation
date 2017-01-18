@@ -89,12 +89,16 @@ $('document').ready(function() {
 					CHECK WAIT
 					{{else if eq $pathInfo.Torrent.Status 2}}
 					CHECK
+					{{else if eq $pathInfo.Torrent.Status 3}}
+					QUEUED FOR DOWNLOAD
 					{{else if eq $pathInfo.Torrent.Status 4}}
 					DOWNLOAD
 					{{else if eq $pathInfo.Torrent.Status 8}}
 					SEEK
 					{{else if eq $pathInfo.Torrent.Status 16}}
 					STOPPED
+					{{else}}
+					{{$pathInfo.Torrent.Status}}
 					{{end}}
 				{{end}}
 			</div>
