@@ -222,7 +222,7 @@ func (a *Assistant) assist() error {
 			break
 		}
 		toStart = append(toStart, pi.Torrent)
-		a.Log("Starting torrent %s", pi.Name)
+		a.Log("Starting torrent", pi.Name)
 	}
 	err := a.msv.t.StartTorrents(toStart)
 	if err != nil {
