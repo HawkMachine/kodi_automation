@@ -32,7 +32,6 @@ type Assistant struct {
 	msv                      *MoveServer
 	sleep                    time.Duration
 	dryRun                   bool
-	moveTarget               string
 	maxConcurrentDownloading int
 	maxConcurrentMoving      int
 
@@ -45,11 +44,10 @@ type Assistant struct {
 	lock sync.Mutex
 }
 
-func newAssistant(msv *MoveServer, moveTarget string) *Assistant {
+func newAssistant(msv *MoveServer) *Assistant {
 	return &Assistant{
-		msv:                      msv,
-		sleep:                    time.Minute,
-		moveTarget:               moveTarget,
+		msv:   msv,
+		sleep: time.Minute,
 		maxConcurrentDownloading: 5,
 		maxConcurrentMoving:      1,
 		TorrentStatus:            map[string]*TorrentStatus{},
@@ -165,13 +163,17 @@ func (a *Assistant) assist() error {
 			ts.Status = "Internal error, move and start allowed at the same time."
 			continue
 		} else if shouldMove {
+			ts.Status = "SHOULD MOVE"
 			toMove = append(toMove, pi)
 		} else if shouldStart {
+			ts.Status = "SHOULD START"
 			todo = append(todo, pi)
+		} else {
+			ts.Status = "NOTHING TO DO"
 		}
 	}
 	a.TorrentStatus = tss
-	log.Printf("New tss: %v", tss)
+	log.Printf("Assitant: new torrent statuses: %v", tss)
 
 	downloading := filterPathInfo(pis, func(pi *PathInfo) bool {
 		return pi.Torrent != nil && pi.Torrent.Status != tr.TR_STATUS_PAUSED
@@ -203,11 +205,11 @@ func (a *Assistant) assist() error {
 		}
 		hadMoveErrors := false
 		for _, pi := range toMoveSelected {
-			a.Log("assist", fmt.Sprintf("Moving %s to %s", pi.Name, a.moveTarget))
-			err := a.msv.moveLocked(pi, a.moveTarget)
+			a.Log("assist", fmt.Sprintf("Moving %s to %s", pi.Name))
+			err := a.msv.moveLocked(pi)
 			if err != nil {
 				hadMoveErrors = true
-				a.Log("assist", fmt.Sprintf("Moving %s to %s failed: %v", pi.Name, a.moveTarget, err))
+				a.Log("assist", fmt.Sprintf("Moving %s to %s failed: %v", pi.Name, err))
 			}
 		}
 		if hadMoveErrors {

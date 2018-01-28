@@ -1,10 +1,14 @@
 {
-	"port": 9080,
-	"source_dir": ".",
-	"movies_targets": ["/tmp"],
-	"series_targets": ["/tmp"],
-	"resources_paths": "resources",
-	"templates_paths": "templates",
-	"end": true
+  "port": 9080,
+  "move_server" : {
+    "source_dir": "/home/kuba/tmp/src",
+    "movies_targets": ["/home/kuba/tmp/tgt"],
+    "series_targets": ["/home/kuba/tmp/tgt"],
+    "default_move_target": "/home/kuba/tmp/tgt",
+    "end": true
+  },
+  "resources_paths": "resources",
+  "templates_paths": "templates",
+  "end": true
 }
 

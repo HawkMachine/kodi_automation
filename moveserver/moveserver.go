@@ -128,81 +128,38 @@ func updateCache(s *MoveServer) {
 	log.Printf("Updating cached info.")
 
 	// List the files in the transmission directory.
-	tranmissionLst, err := directoryListing(s.sourceDir, 1, false)
+	sourceDirListing, err := directoryListing(s.sourceDir, 1, false)
 	if err != nil {
 		s.Log("UpdateCache", fmt.Sprintf("Listing source target error: %v", err))
-		tranmissionLst = nil
+		sourceDirListing = nil
 	}
 
 	// List series from the target directories to generate the suggestions.
-	var seriesListing []string
+	var suggestionsList []string
 	for seriesTarget := range s.seriesTargets {
 		sl, err := getSeriesTargetListing(seriesTarget)
 		if err != nil {
 			fmt.Printf("Listing series target error: %v", err)
 			continue
 		}
-		seriesListing = append(seriesListing, sl...)
+		suggestionsList = append(suggestionsList, sl...)
 	}
 
 	// List all torrents from Transmission.
-	tis, err := s.t.ListAll()
+	torrentsList, err := s.t.ListAll()
 	if err != nil {
 		s.Log("UpdateCache", fmt.Sprintf("Getting torrents info error: %v", err))
-		tis = nil
+		torrentsList = nil
 	}
 
 	// Get transmission info.
 
-	s.setCachedInfo(tranmissionLst, tis, seriesListing)
+	s.setCachedInfo(sourceDirListing, torrentsList, suggestionsList)
 }
 
 func cacheUpdater(s *MoveServer, d time.Duration) {
 	for {
 		updateCache(s)
-		time.Sleep(d)
-	}
-}
-
-func (s *MoveServer) videoLibraryRefresh() {
-	s.lock.Lock()
-	if !s.videoLibraryIsDirty {
-		s.lock.Unlock()
-		return
-	}
-	for _, pi := range s.pathInfo {
-		if pi.MoveInfo.Moving {
-			s.lock.Unlock()
-			return
-		}
-	}
-	// Do not update when I'm home and probably watching.
-	if t := time.Now(); t.Hour() > 19 {
-		s.lock.Unlock()
-		return
-	}
-	s.lock.Unlock()
-
-	s.Log("KodiScan", fmt.Sprintf("Requesting scan on kodi"))
-	resp, err := s.k.VideoLibrary.Scan(
-		&kd.VideoLibraryScanParams{
-			ShowDialogs: false,
-		})
-	if err != nil {
-		s.Log("KodiScan", fmt.Sprintf("Kodi RPC failed: %v", err))
-		return
-	}
-	s.Log("KodiScan", fmt.Sprintf("Result: %s", resp.Result))
-
-	s.lock.Lock()
-	s.videoLibraryIsDirty = false
-	s.videoLibraryLastRefreshed = time.Now()
-	s.lock.Unlock()
-}
-
-func videoLibraryRefresher(s *MoveServer, d time.Duration) {
-	for {
-		s.videoLibraryRefresh()
 		time.Sleep(d)
 	}
 }
@@ -242,8 +199,7 @@ type PathInfo struct {
 	AllowAssistant bool
 	MoveInfo       PathMoveInfo
 	Torrent        *tr.Torrent // Present if found in torrent.
-	PercentDone    float64
-	// TODO: add field for files found on disk.
+	MoveTo         string      // Path where this should be moved, can be empty
 }
 
 type DiskStats struct {
@@ -256,12 +212,12 @@ type DiskStats struct {
 }
 
 type MoveServerConfig struct {
-	SourceDir       string   `json:"source_dir"`
-	MoviesTargets   []string `json:"movies_targets"`
-	SeriesTargets   []string `json:"series_targets"`
-	MaxMvCommands   int      `json:"max_mv_commands"`
-	MvBufferSize    int      `json:"mv_buffer_size"`
-	AssistantTarget string   `json:"assistant_target"`
+	SourceDir         string   `json:"source_dir"`
+	MoviesTargets     []string `json:"movies_targets"`
+	SeriesTargets     []string `json:"series_targets"`
+	MaxMvCommands     int      `json:"max_mv_commands"`
+	MvBufferSize      int      `json:"mv_buffer_size"`
+	DefaultMoveTarget string   `json:"default_move_target"`
 }
 
 type MoveServer struct {
@@ -286,13 +242,16 @@ type MoveServer struct {
 	pathInfoHistory []*PathInfo
 
 	// Information for path that disappeared from the directory without being
-	// move with this moveserver.
+	// moved with this moveserver.
 	pathInfoDisappeared []*PathInfo
 
 	// Path info is kept separately.
 	pathInfo        map[string]*PathInfo
 	cacheRefreshed  time.Time
 	refreshDuration time.Duration
+
+	// Default path where torrents are moved to.
+	defaultMoveTarget string
 
 	// Disk stats
 	diskStats []DiskStats
@@ -308,10 +267,6 @@ type MoveServer struct {
 
 	// Move assistant.
 	Assistant *Assistant
-
-	// Kodi refresh video library.
-	videoLibraryLastRefreshed time.Time
-	videoLibraryIsDirty       bool
 }
 
 func New(p *platform.Platform, c MoveServerConfig) (*MoveServer, error) {
@@ -324,25 +279,21 @@ func New(p *platform.Platform, c MoveServerConfig) (*MoveServer, error) {
 		p.Config.Kodi.Username,
 		p.Config.Kodi.Password)
 	s := &MoveServer{
-		p:               p,
-		t:               t,
-		k:               k,
-		sourceDir:       c.SourceDir,
-		moviesTargets:   collections.NewStringsSet(c.MoviesTargets),
-		seriesTargets:   collections.NewStringsSet(c.SeriesTargets),
-		pathInfoHistory: []*PathInfo{},
-		pathInfo:        map[string]*PathInfo{},
-		refreshDuration: 5 * time.Minute,
-		cacheRefreshed:  time.Now(),
-		moveChannel:     make(chan MoveListenerRequest, c.MvBufferSize),
-		messages:        []*LogMessage{},
-		lock:            sync.Mutex{},
-		messagesLock:    sync.Mutex{},
-	}
-	if c.AssistantTarget != "" {
-		s.Assistant = newAssistant(s, c.AssistantTarget)
-	} else {
-		log.Print("assistant target path is empty, assistant not created")
+		p:                 p,
+		t:                 t,
+		k:                 k,
+		sourceDir:         c.SourceDir,
+		moviesTargets:     collections.NewStringsSet(c.MoviesTargets),
+		seriesTargets:     collections.NewStringsSet(c.SeriesTargets),
+		pathInfoHistory:   []*PathInfo{},
+		pathInfo:          map[string]*PathInfo{},
+		refreshDuration:   5 * time.Minute,
+		cacheRefreshed:    time.Now(),
+		moveChannel:       make(chan MoveListenerRequest, c.MvBufferSize),
+		messages:          []*LogMessage{},
+		lock:              sync.Mutex{},
+		messagesLock:      sync.Mutex{},
+		defaultMoveTarget: c.DefaultMoveTarget,
 	}
 
 	for i := 0; i < c.MaxMvCommands; i++ {
@@ -350,11 +301,13 @@ func New(p *platform.Platform, c MoveServerConfig) (*MoveServer, error) {
 	}
 	go cacheUpdater(s, 5*time.Minute)
 	go diskStatsUpdater(s, 5*time.Minute)
-	if s.Assistant != nil {
-		s.Assistant.Enable()
-		s.Log("moveserver", fmt.Sprintf("assistant created with target path %s", s.Assistant.moveTarget))
-	}
-	// go videoLibraryRefresher(s, 5*time.Minute)
+
+	// If we have a target path of not it makes sense to have an assitant.  It
+	// will start torrents and move them to their destination when they're
+	// finished.
+	s.Assistant = newAssistant(s)
+	s.Assistant.Enable()
+	s.Log("moveserver", fmt.Sprintf("Assistant created, default target path %s", s.defaultMoveTarget))
 
 	return s, nil
 }
@@ -418,39 +371,64 @@ func (s *MoveServer) Log(tp, msg string) {
 	s.messages = append([]*LogMessage{m}, s.messages...)
 }
 
-func (s *MoveServer) Move(path string, to string) error {
+func (s *MoveServer) SetMovePath(name, move_to string) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	// ------------ Path verification ---------------
-	name := filepath.Base(path)
 	pi, ok := s.pathInfo[name]
 	if !ok {
-		return fmt.Errorf("Requested move path %s not found in our data bank", path)
+		return fmt.Errorf("Item %s not found.", name)
 	}
-	if pi.Path != path {
-		return fmt.Errorf("Internal error, found item path is different thatn requested path.")
-	}
-	return s.moveLocked(pi, to)
+	pi.MoveTo = move_to
+	return nil
 }
 
-func (s *MoveServer) moveLocked(pi *PathInfo, to string) error {
-	if filepath.Dir(pi.Path) != s.sourceDir {
-		return fmt.Errorf("Trying to move path %s outside of %s", pi.Path, s.sourceDir)
+func (s *MoveServer) Move(name string) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	pi, ok := s.pathInfo[name]
+	if !ok {
+		return fmt.Errorf("Item %s not found.", name)
+	}
+	return s.moveLocked(pi)
+}
+
+func (s *MoveServer) validateMovePathInfo(pi *PathInfo) error {
+	if pi.Path == "" {
+		return fmt.Errorf("No path associated with %s, likely only in transmission.", pi.Name)
+	}
+	if !pi.AllowMove {
+		return fmt.Errorf("Moving the path is not allowed")
 	}
 	if pi.MoveInfo.Moving {
 		return fmt.Errorf("Requested move path %s is currently in move to %s", pi.MoveInfo.Target)
 	}
 	if _, err := os.Stat(pi.Path); err != nil && os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+func (s *MoveServer) validateMoveTargetPath(path string) error {
+	if !s.moveTargets[path] {
+		return fmt.Errorf("Requested move target %s not on move targets list: %v", path, s.moveTargets)
+	}
+	if _, err := os.Stat(path); err != nil && os.IsNotExist(err) {
+		return err
+	}
+	return nil
+}
+
+func (s *MoveServer) moveLocked(pi *PathInfo) error {
+	// Source path verification
+	if err := s.validateMovePathInfo(pi); err != nil {
 		pi.MoveInfo.LastError = err
 		return err
 	}
 
 	// Target path verification
-	if !s.moveTargets[to] {
-		return fmt.Errorf("Requested move target %s not on move targets list")
-	}
-	if _, err := os.Stat(to); err != nil && os.IsNotExist(err) {
+	if err := s.validateMoveTargetPath(pi.MoveTo); err != nil {
 		pi.MoveInfo.LastError = err
 		return err
 	}
@@ -461,7 +439,7 @@ func (s *MoveServer) moveLocked(pi *PathInfo, to string) error {
 	}
 
 	// Actually making a move.
-	target := filepath.Join(to, filepath.Base(pi.Path))
+	target := filepath.Join(pi.MoveTo, filepath.Base(pi.Path))
 	pi.MoveInfo.Moving = true
 	pi.MoveInfo.Target = target
 
@@ -493,9 +471,8 @@ func (s *MoveServer) SetPathMoveResult(path string, err error, output string) er
 	}
 	if err == nil {
 		// Successful move.
-		delete(s.pathInfo, path)
+		delete(s.pathInfo, name)
 		s.pathInfoHistory = append(s.pathInfoHistory, pi)
-		s.videoLibraryIsDirty = true
 		s.Log("MoveResult", fmt.Sprintf("Successfully moved %s to %s", pi.Name, pi.MoveInfo.Target))
 	} else {
 		// Unsuccessful move.
@@ -520,14 +497,14 @@ func getSeriesTargetListing(seriesTarget string) ([]string, error) {
 // setCachedInfo updates cahed infor on MoveServer. paths is a list of paths in
 // the source dir, ntis is the new transmission info, nstl is the new
 // series target listing.
-func (s *MoveServer) setCachedInfo(paths []string, ntis []*tr.Torrent, nstl []string) {
+func (s *MoveServer) setCachedInfo(sourceDirListing []string, torrenstListing []*tr.Torrent, suggestionsListing []string) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	// If any of the needed values are nil, that means there was an error. For
 	// now, we do not do anything with that data.
-	if paths == nil || ntis == nil || nstl == nil {
-		s.Log("SetCachedInfo", fmt.Sprintf("got nil: paths=%v, ntis=%v, nstl=%s", paths, ntis, nstl))
+	if sourceDirListing == nil {
+		s.Log("SetCachedInfo", fmt.Sprintf("got nil: paths=%v, ntis=%v, nstl=%s", sourceDirListing, torrenstListing, suggestionsListing))
 		return
 	}
 
@@ -535,38 +512,39 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*tr.Torrent, nstl []st
 
 	// Create new path info for paths that were found on disk.
 	newPathInfo := map[string]*PathInfo{}
-	for _, path := range paths {
+	for _, path := range sourceDirListing {
 		name := filepath.Base(path)
 		newPathInfo[name] = &PathInfo{
 			Name:           name,
 			Path:           path,
 			AllowAssistant: true,
+			MoveTo:         s.defaultMoveTarget,
 		}
 	}
 
 	// Add new path info from the transmission data that was found.
-	for _, t := range ntis {
+	for _, t := range torrenstListing {
 		pi, ok := newPathInfo[t.Name]
 		if !ok {
 			newPathInfo[t.Name] = &PathInfo{
 				Name:           t.Name,
 				Torrent:        t,
-				PercentDone:    t.PercentDone * 100,
 				AllowAssistant: true,
+				MoveTo:         s.defaultMoveTarget,
 			}
 		} else {
-			// Try to join path info from torrent info.
+			// Update the torrent field for this path.
 			pi.Torrent = t
-			pi.PercentDone = t.PercentDone * 100
 		}
 	}
 
-	// Copy old move info to new data.
+	// Copy fields from old path info to newly created path info structures.
 	for _, opi := range oldPathInfo {
-		// TODO: keep the old move info in some sort of history.
 		if pi, ok := newPathInfo[opi.Name]; ok {
-			pi.MoveInfo = opi.MoveInfo
 			pi.AllowAssistant = opi.AllowAssistant
+			pi.AllowMove = opi.AllowMove
+			pi.MoveInfo = opi.MoveInfo
+			pi.MoveTo = opi.MoveTo
 		} else {
 			s.pathInfoDisappeared = append(s.pathInfoDisappeared, opi)
 		}
@@ -574,7 +552,7 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*tr.Torrent, nstl []st
 
 	// Update AllowMove
 	for _, pi := range newPathInfo {
-		pi.AllowMove = true
+		pi.AllowMove = pi.Path != ""
 		if pi.Torrent != nil {
 			pi.AllowMove = pi.Torrent.PercentDone == 1.0 && !pi.MoveInfo.Moving
 		}
@@ -584,7 +562,7 @@ func (s *MoveServer) setCachedInfo(paths []string, ntis []*tr.Torrent, nstl []st
 	s.pathInfo = newPathInfo
 
 	moveTargets := map[string]bool{}
-	for _, seriesListingPath := range nstl {
+	for _, seriesListingPath := range suggestionsListing {
 		moveTargets[seriesListingPath] = true
 	}
 	for seriesTarget := range s.seriesTargets {

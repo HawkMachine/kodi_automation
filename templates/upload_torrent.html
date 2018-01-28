@@ -1,0 +1,26 @@
+{{define "section"}}
+{{$mts :=  .MoveTargets }}
+<script>
+$('document').ready(function() {
+	$( ".move_target_select" ).autocomplete({
+		minLength: 0,
+	  source: [
+			{{range $idx, $path := $mts}}
+			{{$path}},
+			{{end}}
+		]
+	});
+});
+</script>
+
+<md-card>
+<md-card-content layout="column">
+<h3>Upload torrent</h3>
+<form>
+	<input type="text" name="url">
+	<input name="target" class="move_target_select">
+</form>
+</md-card-content>
+</md-card>
+
+{{end}}

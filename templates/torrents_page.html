@@ -1,24 +1,24 @@
 {{define "navpane"}}
 <!-- Curent Paths -->
 <md-card>
-	<md-card-title><md-card-title-text>DISKS</md-card-title-text></md-card-title>
-	<md-card-content flex layout="column">
-			{{range $idx, $diskStats := .DiskStats}}
-			<div layout="column" style="padding-bottom: 10px;">
-				<div class="bold" layout="row" layout-alignment="center end">
-					<span flex>{{$diskStats.Path}}</span>
-					<span>{{$diskStats.FsType}}</span>
-				</div>
-				<div layout="row">
-					<span flex=40>{{sizeformat $diskStats.Avail}}</span>
-					<span flex> free of </span>
-					<span flex=40 class="text-align: right">{{sizeformat $diskStats.Size}}</span>
-				</div>
-				<md-progress-linear md-mode="determinate" value="{{print $diskStats.PercentFull}}"></md-progress-linear>
-			</div>
-			{{end}}
-			<md-button ng-href="/update/disks">Update disk stats</md-button>
-	</md-card-content>
+  <md-card-title><md-card-title-text>DISKS</md-card-title-text></md-card-title>
+  <md-card-content flex layout="column">
+      {{range $idx, $diskStats := .DiskStats}}
+      <div layout="column" style="padding-bottom: 10px;">
+        <div class="bold" layout="row" layout-alignment="center end">
+          <span flex>{{$diskStats.Path}}</span>
+          <span>{{$diskStats.FsType}}</span>
+        </div>
+        <div layout="row">
+          <span flex=40>{{sizeformat $diskStats.Avail}}</span>
+          <span flex> free of </span>
+          <span flex=40 class="text-align: right">{{sizeformat $diskStats.Size}}</span>
+        </div>
+        <md-progress-linear md-mode="determinate" value="{{print $diskStats.PercentFull}}"></md-progress-linear>
+      </div>
+      {{end}}
+      <md-button ng-href="/update/disks">Update disk stats</md-button>
+  </md-card-content>
 </md-card>
 {{end}}
 
@@ -27,177 +27,180 @@
 {{$mts :=  .MoveTargets }}
 <script>
 $('document').ready(function() {
-	$( ".move_target_select" ).autocomplete({
-		minLength: 0,
-	  source: [
-			{{range $idx, $path := $mts}}
-			{{$path}},
-			{{end}}
-		]
-	});
+  $( ".move_target_select" ).autocomplete({
+    minLength: 0,
+    source: [
+      {{range $idx, $path := $mts}}
+      {{$path}},
+      {{end}}
+    ]
+  });
 });
 </script>
 
 <md-toolbar layout="row">
-	<div class="md-toolbar-tools">
-		<div flex="30">
-			<span flex="50"><b>Cache refreshed</b></span>
-			<span flex="50">{{.CacheResfreshed}}</span>
-		</div>
-		<div flex="20">
-			<span flex="50"><b>Queue</b></span>
-			<span flex="50">{{.MvBufferElems}} / {{.MvBufferSize}}</span>
-		</div>
-		<div flex="20">
-			<span flex="50"><b>Assistant</b></span>
-			<span flex="50">
-			{{if .AssistantEnabled}}Enabled
-			{{else}}Disabled
-			{{end}}
-			</span>
-		</div>
-		<md-button ng-href="/update/cache">Update cache</md-button>
-	</div>
+  <div class="md-toolbar-tools">
+    <div flex="30">
+      <span flex="50"><b>Cache refreshed</b></span>
+      <span flex="50">{{.CacheResfreshed}}</span>
+    </div>
+    <div flex="20">
+      <span flex="50"><b>Queue</b></span>
+      <span flex="50">{{.MvBufferElems}} / {{.MvBufferSize}}</span>
+    </div>
+    <div flex="20">
+      <span flex="50"><b>Assistant</b></span>
+      <span flex="50">
+      {{if .AssistantEnabled}}Enabled
+      {{else}}Disabled
+      {{end}}
+      </span>
+    </div>
+    <md-button ng-href="/update/cache">Update cache</md-button>
+  </div>
 </md-toolbar>
 
 {{ if .PathInfo}}
 <md-card>
 <md-card-content>
 <md-list flex layout="column" flex>
-	{{ range $idx, $pathInfo := .PathInfo }}
-	<md-list-item layout="row" flex>
-	<md-panel layout="column" flex>
-		<div layout="row">
-			<!-- Path Column -->
-			<div layout="column" flex>
-				<span class="torrent_name path" id="path_{{$idx}}">▶ {{print $pathInfo.Name }}</span>
-			</div>
-			
-			<div flex="10" layout="row" style="text-align: right">
-				{{if $pathInfo.Torrent}}
-				<span flex=50 class="darkgreen_bold">{{sizeformat $pathInfo.Torrent.RateDownload}}&#8615;</span>
-				<span flex=50 class="darkred_bold">{{sizeformat $pathInfo.Torrent.RateUpload}}&#8613;</span>
-				{{end}}
-			</div>
+  {{ range $idx, $pathInfo := .PathInfo }}
+  <md-list-item layout="row" flex>
+  <md-panel layout="column" flex>
+    <div layout="row">
+      <!-- Path Column -->
+      <div layout="column" flex>
+        <span class="torrent_name path" id="path_{{$idx}}">▶ {{print $pathInfo.Name }}</span>
+      </div>
+      
+      <div flex="10" layout="row" style="text-align: right">
+        {{if $pathInfo.Torrent}}
+        <span flex=50 class="darkgreen_bold">{{sizeformat $pathInfo.Torrent.RateDownload}}&#8615;</span>
+        <span flex=50 class="darkred_bold">{{sizeformat $pathInfo.Torrent.RateUpload}}&#8613;</span>
+        {{end}}
+      </div>
 
-			<!-- Torrent Status -->
-			<div flex=10 class="torrent_state darkblue_bold" style="text-align: right">
-				{{if $pathInfo.Torrent}}
-					{{if eq $pathInfo.Torrent.Status 0}}
-					PAUSED
-					{{else if eq $pathInfo.Torrent.Status 1}}
-					CHECK WAIT
-					{{else if eq $pathInfo.Torrent.Status 2}}
-					CHECK
-					{{else if eq $pathInfo.Torrent.Status 3}}
-					QUEUED FOR DOWNLOAD
-					{{else if eq $pathInfo.Torrent.Status 4}}
-					DOWNLOAD
-					{{else if eq $pathInfo.Torrent.Status 8}}
-					SEEK
-					{{else if eq $pathInfo.Torrent.Status 16}}
-					STOPPED
-					{{else}}
-					{{$pathInfo.Torrent.Status}}
-					{{end}}
-				{{end}}
-			</div>
-			<!-- Torrent Percent Done -->
-			<div flex=5 style="text-align: right">
-				{{if $pathInfo.Torrent}}
-					{{if $pathInfo.Torrent.IsFinished }}
-						<span class="torrent_state darkgreen_bold">Finished</span>
-						{{else}}
-						<div class="torrent_state darkgreen_bold">
-							<span> {{ printf "%.2f" $pathInfo.PercentDone }}% </span>
-							{{if $pathInfo.Torrent.DoneDate }}
-							(DONE)
-							{{end}}
-						</div>
-					{{end}}
-				{{else}}
-						<span class="torrent_state darkblue_bold">Torrent info missing</span>
-				{{end}}
-			</div>
+      <!-- Torrent Status -->
+      <div flex=10 class="torrent_state darkblue_bold" style="text-align: right">
+        {{if $pathInfo.Torrent}}
+          {{if eq $pathInfo.Torrent.Status 0}}
+          PAUSED
+          {{else if eq $pathInfo.Torrent.Status 1}}
+          CHECK WAIT
+          {{else if eq $pathInfo.Torrent.Status 2}}
+          CHECK
+          {{else if eq $pathInfo.Torrent.Status 3}}
+          QUEUED FOR DOWNLOAD
+          {{else if eq $pathInfo.Torrent.Status 4}}
+          DOWNLOAD
+          {{else if eq $pathInfo.Torrent.Status 8}}
+          SEEK
+          {{else if eq $pathInfo.Torrent.Status 16}}
+          STOPPED
+          {{else}}
+          {{$pathInfo.Torrent.Status}}
+          {{end}}
+        {{end}}
+      </div>
+      <!-- Torrent Percent Done -->
+      <div flex=5 style="text-align: right">
+        {{if $pathInfo.Torrent}}
+          {{if $pathInfo.Torrent.IsFinished }}
+            <span class="torrent_state darkgreen_bold">Finished</span>
+            {{else}}
+            <div class="torrent_state darkgreen_bold">
+              <span> {{ printf "%.2f" $pathInfo.Torrent.PercentDone }}% </span>
+              {{if $pathInfo.Torrent.DoneDate }}
+              (DONE)
+              {{end}}
+            </div>
+          {{end}}
+        {{else}}
+            <span class="torrent_state darkblue_bold">Torrent info missing</span>
+        {{end}}
+      </div>
 
-			<!-- Move Form -->
-			<div flex=25 style="text-align: right">
-			{{if $pathInfo.MoveInfo.Moving}}
-				<span class="darkblue_bold">MOVING TO</span>
-				<span class="target path">{{print $pathInfo.MoveInfo.Target}}</span>
-			{{else}}
-				{{if $pathInfo.AllowMove}}
-					<div>
-						{{if not $pathInfo.Torrent}}
-							<span class="darkblue_bold">No torrent info - be careful what you move</span>
-						{{end}}
-						<form action="/move" method="post">
-							<input name="target" class="move_target_select">
-							<input type="hidden" name="path" value="{{print $pathInfo.Path}}">
-							<input type="hidden" name="type" value="move">
-							<input type="submit" value="move">
-						</form>
-					</div>
-				{{else}}
-				  <div>
-				  {{if $pathInfo.Torrent}}
-						{{if $pathInfo.Torrent.DoneDate}}
-							<span class="darkblue_bold">Not allowed to move path but torrent is finished. ????</span>
-						{{else}}
-							<span class="darkblue_bold">Not allowed because torrent not finished yet.</span>
-						{{end}}
-					{{else}}
-							<span class="darkblue_bold">Not allowed to move but no torrent info. ????</span>
-					{{end}}
-					</div>
-				{{end}}
-			{{end}}
-			</div>
-		</div>
+      <!-- Move Form -->
+      <div flex=25 style="text-align: right">
+      {{if $pathInfo.MoveInfo.Moving}}
+        <span class="darkblue_bold">MOVING TO</span>
+        <span class="target path">{{print $pathInfo.MoveInfo.Target}}</span>
+      {{else}}
+        <form action="/setmovepath" method="post">
+          <input type="hidden" name="name" value="{{$pathInfo.Name}}">
+          <input name="move_to" class="move_target_select" value="{{$pathInfo.MoveTo}}">
+          <input type="submit" value="Set Move Path">
+        </form>
+        {{if $pathInfo.AllowMove}}
+          <div>
+            {{if not $pathInfo.Torrent}}
+              <span class="darkblue_bold">No torrent info - be careful what you move</span>
+            {{end}}
+              <form action="/move" method="post">
+                <input type="hidden" name="name" value="{{$pathInfo.Name}}">
+                <input type="submit" value="Move">
+              </form>
+          </div>
+        {{else}}
+          <div>
+          {{if $pathInfo.Torrent}}
+            {{if $pathInfo.Torrent.DoneDate}}
+              <span class="darkblue_bold">Not allowed to move path but torrent is finished. ????</span>
+            {{else}}
+              <span class="darkblue_bold">Not allowed because torrent not finished yet.</span>
+            {{end}}
+          {{else}}
+            <span class="darkblue_bold">Not allowed to move but no torrent info. ????</span>
+          {{end}}
+          </div>
+        {{end}}
+      {{end}}
+      </div>
+    </div>
 
-		<!-- Progress bar -->
-		<md-progress-linear md-mode="determinate" value="{{$pathInfo.PercentDone}}"></md-progress-linear>
-		{{if $pathInfo.Torrent }}
-		<div class="expandable" id="listing_{{$idx}}" layout="column" style="display: none;" layout="column">
-			<div layout="row">
-				<div flex="33" layout="column">
-					<div layout="row">
-						<span flex=75 class="darkblue_bold">Size</span>
-						<span flex class="darkred_bold">{{sizeformat $pathInfo.Torrent.TotalSize}}</span>
-					</div>
-					<div flex="33" layout="row">
-						<span flex=75 class="darkblue_bold">Downloaded</span>
-						<span flex class="darkred_bold">{{sizeformat $pathInfo.Torrent.DownloadedEver}}</span>
-					</div>
-				</div>
-				<div flex="33" layout="row">
-				</div>
-			</div>
-			{{if $pathInfo.Torrent.Files }}
-			<ul>
-				{{ range $idx, $torrentFileInfo := $pathInfo.Torrent.Files }}
-				<li> <span class="path" flex>{{print $torrentFileInfo.Name}}</span> </li>
-				{{end}}
-			</ul>
-			<script>
-				$(function() {
-					$("#path_{{$idx}}").click(function() {
-						$("#listing_{{$idx}}").toggle("fold", {}, 500)
-					});
-				});
-			</script>
-			{{end}}
-		</div>
-		{{end}}
+    <!-- Progress bar -->
+    {{if $pathInfo.Torrent }}
+    <md-progress-linear md-mode="determinate" value="{{$pathInfo.Torrent.PercentDone}}"></md-progress-linear>
+    <div class="expandable" id="listing_{{$idx}}" layout="column" style="display: none;" layout="column">
+      <div layout="row">
+        <div flex="33" layout="column">
+          <div layout="row">
+            <span flex=75 class="darkblue_bold">Size</span>
+            <span flex class="darkred_bold">{{sizeformat $pathInfo.Torrent.TotalSize}}</span>
+          </div>
+          <div flex="33" layout="row">
+            <span flex=75 class="darkblue_bold">Downloaded</span>
+            <span flex class="darkred_bold">{{sizeformat $pathInfo.Torrent.DownloadedEver}}</span>
+          </div>
+        </div>
+        <div flex="33" layout="row">
+        </div>
+      </div>
+      {{if $pathInfo.Torrent.Files }}
+      <ul>
+        {{ range $idx, $torrentFileInfo := $pathInfo.Torrent.Files }}
+        <li> <span class="path" flex>{{print $torrentFileInfo.Name}}</span> </li>
+        {{end}}
+      </ul>
+      <script>
+        $(function() {
+          $("#path_{{$idx}}").click(function() {
+            $("#listing_{{$idx}}").toggle("fold", {}, 500)
+          });
+        });
+      </script>
+      {{end}}
+    </div>
+    {{end}}
 
-		<!-- Last move info error-->
-		{{if $pathInfo.MoveInfo.LastError}}
-			<div><span class="darkred_bold">Last move error:</span> {{print $pathInfo.MoveInfo.LastError}}</div>
-			<div>{{$pathInfo.MoveInfo.LastErrorOutput}}</div>
-		{{end}}
-	</md-panel>
-	</md-list-item>
-	<md-divider></md-divider>
+    <!-- Last move info error-->
+    {{if $pathInfo.MoveInfo.LastError}}
+      <div><span class="darkred_bold">Last move error:</span> {{print $pathInfo.MoveInfo.LastError}}</div>
+      <div>{{$pathInfo.MoveInfo.LastErrorOutput}}</div>
+    {{end}}
+  </md-panel>
+  </md-list-item>
+  <md-divider></md-divider>
   {{end}}
 <md-list>
 </md-card-content>
@@ -209,9 +212,9 @@ $('document').ready(function() {
 <h3>Messages</h3>
 {{ range $idx, $m := .Messages }}
 <div layout="row">
-	<span flex="10">{{timeformat $m.T "" }}</span>
-	<span flex="10">{{$m.Type}}</span>
-	<span flex>{{$m.Msg}}</span>
+  <span flex="10">{{timeformat $m.T "" }}</span>
+  <span flex="10">{{$m.Type}}</span>
+  <span flex>{{$m.Msg}}</span>
 </div>
 {{end}}
 </md-card-content>

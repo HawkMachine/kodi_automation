@@ -18,6 +18,7 @@ import (
 	"github.com/HawkMachine/kodi_automation/views/kodiview"
 	"github.com/HawkMachine/kodi_automation/views/moveserverview"
 	"github.com/HawkMachine/kodi_automation/views/transmissionview"
+	"github.com/HawkMachine/kodi_automation/views/uploadtorrentview"
 	"github.com/HawkMachine/kodi_automation/views/wrapview"
 )
 
@@ -135,7 +136,7 @@ func main() {
 
 	if *configFile != "" {
 		var err error
-		log.Printf("Loading from config")
+		log.Printf("Loading from config %s", *configFile)
 		cfg, err = loadConfigFromFile(*configFile)
 		log.Println(cfg)
 		if err != nil {
@@ -294,9 +295,14 @@ func main() {
 		log.Println("Kodi address missing. Skipping kodi stats view.")
 	}
 
-	// Transmission view
 	if cfg.TransmissionAddress != "" {
+		// Transmission view
 		views = append(views, transmissionview.New(p))
+
+		// Upload torrent view
+		if utv, err := uploadtorrentview.New(p, moveServer); err != nil {
+			views = append(views, utv)
+		}
 	}
 
 	// Run server.

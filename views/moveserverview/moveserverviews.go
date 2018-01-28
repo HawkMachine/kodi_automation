@@ -51,6 +51,7 @@ func (msv *MoveServerView) GetHandlers() map[string]server.ViewHandle {
 	return map[string]server.ViewHandle{
 		"/":             server.NewViewHandle(msv.moveDashboardPageHandler),
 		"/move":         server.NewViewHandle(msv.movePostHandler),
+		"/setmovepath":  server.NewViewHandle(msv.setMovePathPostHandler),
 		"/update/cache": server.NewViewHandle(msv.updateCacheHandler),
 		"/update/disks": server.NewViewHandle(msv.updateDiskStatsHandler),
 		"/assistant":    server.NewViewHandle(msv.assistantHandler),
@@ -73,6 +74,21 @@ func New(server server.HTTPServer, moveServer *moveserver.MoveServer) (server.Vi
 	}, nil
 }
 
+func (msv *MoveServerView) setMovePathPostHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {
+	log.Printf("Received move POST request", r)
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	err = msv.moveServer.SetMovePath(r.Form.Get("name"), r.Form.Get("move_to"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/", http.StatusFound)
+}
+
 func (msv *MoveServerView) movePostHandler(w http.ResponseWriter, r *http.Request, s server.HTTPServer) {
 	log.Printf("Received move POST request", r)
 	err := r.ParseForm()
@@ -80,16 +96,7 @@ func (msv *MoveServerView) movePostHandler(w http.ResponseWriter, r *http.Reques
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	form := r.Form
-	messageType := form.Get("type")
-	switch messageType {
-	case "":
-		err = fmt.Errorf("Submitted POST is missing type value")
-	case "move":
-		err = msv.moveServer.Move(form.Get("path"), form.Get("target"))
-	default:
-		err = fmt.Errorf("Submitted POST has unrecognized type value: %s", messageType)
-	}
+	err = msv.moveServer.Move(r.Form.Get("name"))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
